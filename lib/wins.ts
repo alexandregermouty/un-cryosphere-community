@@ -2,6 +2,7 @@
 // "Share New Event" forms, so that entries can be synchronised automatically.
 // Field names and option lists follow the IHP-WINS forms; see docs/WINS_SYNC.md.
 import { localInput } from './calendar.ts';
+import { unescoCountries, unescoCountry } from './countries.ts';
 
 export const WINS_ORGANIZATION = 'Intergovernmental Hydrological Programme';
 /** Initiative under which DACS content appears on IHP-WINS. To be confirmed with the IHP-WINS team. */
@@ -13,30 +14,29 @@ export const NEWS_BODY_MAX = 10000;
 export const EVENT_OVERVIEW_MAX = 5000;
 export const MAX_LINKS = 10;
 
-export type WinsVisibility = 'public' | 'private' | 'off';
-export const winsVisibilities: [WinsVisibility, string][] = [
-  ['public', 'Public – visible to everyone'],
-  ['private', 'Private – only visible to staff from the host organization'],
-  ['off', 'Do not share on IHP-WINS (DACS Community only)'],
-];
+/** Every news item and every public event is shared as public; internal meetings are never shared. */
+export type WinsVisibility = 'public' | 'off';
 export const winsEventTypes = ['Conference', 'Workshop', 'Seminar', 'Training', 'Webinar', 'Meeting', 'Prize Award Ceremony', 'Book Launch', 'Celebration'] as const;
 export const eventFormats: [string, string][] = [['in-person', 'In-person'], ['online', 'Online'], ['hybrid', 'Hybrid']];
 
 export const ALL_MEMBER_STATES = 'All member states';
-/** Member States exactly as listed in the IHP-WINS forms. */
-export const memberStates: string[] = ['Land Islands', 'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Anguilla', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia Plurinational State of', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'British Virgin Islands', 'Brunei Darussalam', 'Bulgaria', 'Burkina Faso', 'Burundi', 'C Te D Ivoire', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Cook Islands', 'Costa Rica', 'Croatia', 'Cuba', 'Cura Ao', 'Cyprus', 'Czechia', 'Democratic People S Republic of Korea', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'European Union', 'Faroes', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea Bissau', 'Guyana', 'Haiti', 'Holy See', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran Islamic Republic of', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Lao People S Democratic Republic', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macao China', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia Federated States of', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 'Republic of Korea', 'Republic of Moldova', 'Romania', 'Russian Federation', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Sudan', 'Spain', 'Sri Lanka', 'State of Palestine', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syrian Arab Republic', 'T Rkiye', 'Tajikistan', 'Thailand', 'Timor Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom of Great Britain and Northern Ireland', 'United Republic of Tanzania', 'United States of America', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela Bolivarian Republic of', 'Viet Nam', 'Yemen', 'Zambia', 'Zimbabwe'];
+/** Member States exactly as listed in the IHP-WINS forms (used to convert UNESCO names when exporting). */
+export const winsMemberStates: string[] = ['Land Islands', 'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Anguilla', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia Plurinational State of', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'British Virgin Islands', 'Brunei Darussalam', 'Bulgaria', 'Burkina Faso', 'Burundi', 'C Te D Ivoire', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Canada', 'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo', 'Cook Islands', 'Costa Rica', 'Croatia', 'Cuba', 'Cura Ao', 'Cyprus', 'Czechia', 'Democratic People S Republic of Korea', 'Democratic Republic of the Congo', 'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'European Union', 'Faroes', 'Fiji', 'Finland', 'France', 'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea Bissau', 'Guyana', 'Haiti', 'Holy See', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran Islamic Republic of', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kuwait', 'Kyrgyzstan', 'Lao People S Democratic Republic', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Macao China', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia Federated States of', 'Monaco', 'Mongolia', 'Montenegro', 'Montserrat', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Niue', 'North Macedonia', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Qatar', 'Republic of Korea', 'Republic of Moldova', 'Romania', 'Russian Federation', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Sint Maarten', 'Slovakia', 'Slovenia', 'Solomon Islands', 'Somalia', 'South Africa', 'South Sudan', 'Spain', 'Sri Lanka', 'State of Palestine', 'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syrian Arab Republic', 'T Rkiye', 'Tajikistan', 'Thailand', 'Timor Leste', 'Togo', 'Tokelau', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom of Great Britain and Northern Ireland', 'United Republic of Tanzania', 'United States of America', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela Bolivarian Republic of', 'Viet Nam', 'Yemen', 'Zambia', 'Zimbabwe'];
 
-// IHP-WINS shows some names without accents or punctuation. DACS Community displays the
-// usual spelling but stores the IHP-WINS value, so that both sites use the same identifiers.
-const displayNames: Record<string, string> = {
-  'Land Islands': 'Åland Islands', 'C Te D Ivoire': "Côte d'Ivoire", 'Cura Ao': 'Curaçao', 'T Rkiye': 'Türkiye',
-  'Democratic People S Republic of Korea': "Democratic People's Republic of Korea",
-  'Lao People S Democratic Republic': "Lao People's Democratic Republic", 'Guinea Bissau': 'Guinea-Bissau',
-  'Timor Leste': 'Timor-Leste', 'Bolivia Plurinational State of': 'Bolivia (Plurinational State of)',
-  'Iran Islamic Republic of': 'Iran (Islamic Republic of)', 'Micronesia Federated States of': 'Micronesia (Federated States of)',
-  'Venezuela Bolivarian Republic of': 'Venezuela (Bolivarian Republic of)', 'Macao China': 'Macao, China',
-};
-export const stateName = (value: string) => displayNames[value] || value;
+/** Member States offered in DACS Community: the country names approved by UNESCO (lib/countries.ts). */
+export const memberStates: string[] = unescoCountries;
+
+// IHP-WINS writes names without accents or punctuation (for example "C Te D Ivoire").
+const winsKey = (s: string) => s.replace(/[^A-Za-z0-9]+/g, ' ').trim().toLowerCase();
+const winsByKey = new Map(winsMemberStates.map(w => [winsKey(w), w]));
+const winsOverrides: Record<string, string> = { 'Netherlands (Kingdom of the)': 'Netherlands' };
+/** The IHP-WINS value for a UNESCO country name (the name itself when IHP-WINS has no match). */
+export function winsState(name: string): string {
+  if (name === ALL_MEMBER_STATES) return name;
+  return winsOverrides[name] || winsByKey.get(winsKey(name)) || name;
+}
+/** UNESCO name for a stored value, including values saved in the IHP-WINS spelling. */
+export const stateName = (value: string) => unescoCountry(value) || value;
 
 export function slugify(text: string): string {
   return text.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -81,14 +81,13 @@ const firstPdf = (items?: Attachment[]) => {
 /** Header image: a link, or an image uploaded to DACS Community (read from contentImages/{id} by the sync process). */
 const headerImage = (d: any) => (d.headerImageUrl ? { url: d.headerImageUrl } : d.headerImageId ? { dacsImageId: d.headerImageId } : null);
 const markdownImages = (urls?: string[]) => (urls || []).map(u => `![](${u})`).join('\n');
-const visibility = (d: any): WinsVisibility => (d.wins === 'public' || d.wins === 'private' ? d.wins : 'off');
+
 
 export type SyncContext = { appUrl: string; bodyName?: (id: string) => string };
 
-/** IHP-WINS "Share News" record for a DACS news item, or null when it is not shared on IHP-WINS. */
+/** IHP-WINS "Share News" record for a DACS news item. Every news item is shared as public. */
 export function winsNews(p: any, ctx: SyncContext) {
-  const vis = visibility(p);
-  if (vis === 'off') return null;
+  const vis: WinsVisibility = 'public';
   const title = (p.title || '').trim();
   return {
     kind: 'news' as const,
@@ -118,7 +117,7 @@ export function winsNews(p: any, ctx: SyncContext) {
       externalImageUrls: markdownImages(p.imageUrls),
     },
     memberStatesAndInitiatives: {
-      memberStates: p.memberStates || [],
+      memberStates: (p.memberStates || []).map(stateName).map(winsState),
       associatedInitiatives: [WINS_INITIATIVE],
     },
     dacs: {
@@ -131,10 +130,10 @@ export function winsNews(p: any, ctx: SyncContext) {
   };
 }
 
-/** IHP-WINS "Share New Event" record for a DACS event, or null for internal meetings and events not shared on IHP-WINS. */
+/** IHP-WINS "Share New Event" record for a public DACS event, or null for internal meetings. */
 export function winsEvent(e: any, ctx: SyncContext) {
-  const vis = visibility(e);
-  if (vis === 'off' || (e.meetingType && e.meetingType !== 'public')) return null;
+  if (e.meetingType && e.meetingType !== 'public') return null;
+  const vis: WinsVisibility = 'public';
   const zone = e.timeZone || 'UTC';
   const start = localInput(e.startAt, zone), end = localInput(new Date(Date.parse(e.endAt) - 1), zone);
   const endTime = localInput(e.endAt, zone).slice(11);
@@ -166,7 +165,7 @@ export function winsEvent(e: any, ctx: SyncContext) {
     agendaAndAdditionalInformation: { agendaOrFlyer: firstPdf(e.attachments), additionalInformation: e.additionalInfo || '' },
     headerImage: headerImage(e),
     summaryExcerpt: excerpt(e.summary, e.description),
-    memberStatesAndInitiatives: { memberStates: e.memberStates || [], associatedInitiatives: [WINS_INITIATIVE] },
+    memberStatesAndInitiatives: { memberStates: (e.memberStates || []).map(stateName).map(winsState), associatedInitiatives: [WINS_INITIATIVE] },
     dacs: {
       startAt: e.startAt, endAt: e.endAt, timeZone: zone,
       overarchingChallenges: e.ocs || [], mainGoals: e.mgs || [],

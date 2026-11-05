@@ -204,7 +204,9 @@ const countryAliases: Record<string, string> = {
   "micronesia (federated states of)": "Micronesia", "holy see": "Vatican", "state of palestine": "Palestine", "palestine": "Palestine",
   "hong kong": "Hong Kong", "the netherlands": "Netherlands", "holland": "Netherlands", "the gambia": "Gambia", "the bahamas": "Bahamas",
   "kyrgyz republic": "Kyrgyzstan", "slovak republic": "Slovakia", "antigua and barbuda": "Antigua and Barb.", "saint kitts and nevis": "St. Kitts and Nevis",
-  "saint vincent and the grenadines": "St. Vin. and Gren.", "sao tome and principe": "São Tomé and Principe", "são tomé and príncipe": "São Tomé and Principe",
+  "saint vincent and the grenadines": "St. Vin. and Gren.",
+  // UNESCO names (lib/countries.ts) that differ from the map names.
+  "netherlands (kingdom of the)": "Netherlands", "united kingdom of great britain and northern ireland": "United Kingdom", "cook islands": "Cook Is.", "sao tome and principe": "São Tomé and Principe", "são tomé and príncipe": "São Tomé and Principe",
 };
 const normal = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 const byNormal = new Map(Object.keys(countryCentroids).map((k) => [normal(k), k]));

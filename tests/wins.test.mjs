@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { winsNews, winsEvent, slugify, excerpt, memberStates, memberStatesError, linksError, detailLines, stateName, ALL_MEMBER_STATES, WINS_ORGANIZATION } from '../lib/wins.ts';
+import { winsNews, winsEvent, slugify, excerpt, memberStates, winsMemberStates, winsState, memberStatesError, linksError, detailLines, stateName, ALL_MEMBER_STATES, WINS_ORGANIZATION } from '../lib/wins.ts';
+import { unescoCountries, unescoCountry } from '../lib/countries.ts';
 import { eventError } from '../lib/calendar.ts';
 
 const ctx = { appUrl: 'https://example.org/dacs/', bodyName: (id) => ({ wg3: 'Working Group 3' })[id] || id };
@@ -8,7 +9,7 @@ const ctx = { appUrl: 'https://example.org/dacs/', bodyName: (id) => ({ wg3: 'Wo
 test('news shared on IHP-WINS map to every section of the Share News form', () => {
   const post = { id: 'n1', title: 'Glacier mass balance 2026', publishedOn: '2026-11-04', source: 'WGMS', wins: 'public', summary: 'Short summary.', body: 'Full text.',
     url: 'https://wgms.ch', relatedLinks: ['https://a.org'], additionalContent: 'Background.', headerImageUrl: 'https://img.org/h.jpg', imageUrls: ['https://img.org/1.jpg'],
-    memberStates: ['Switzerland', 'C Te D Ivoire'], bodyId: 'wg3', mgs: ['3.1'], author_name: 'Alex', attachments: [{ id: 'f1', name: 'note.docx', type: 'docx', size: 10 }, { id: 'f2', name: 'report.pdf', type: 'pdf', size: 20 }] };
+    memberStates: ['Switzerland', "Côte d'Ivoire"], bodyId: 'wg3', mgs: ['3.1'], author_name: 'Alex', attachments: [{ id: 'f1', name: 'note.docx', type: 'docx', size: 10 }, { id: 'f2', name: 'report.pdf', type: 'pdf', size: 20 }] };
   const w = winsNews(post, ctx);
   assert.equal(w.sourceId, 'dacs-news-n1');
   assert.deepEqual(w.articleInformation, { articleTitle: 'Glacier mass balance 2026', articleUrl: 'glacier-mass-balance-2026', publicationDate: '2026-11-04', authorSource: 'WGMS', visibility: 'public', organization: WINS_ORGANIZATION });
@@ -21,9 +22,9 @@ test('news shared on IHP-WINS map to every section of the Share News form', () =
   assert.equal(w.dacs.sharedFor, 'Working Group 3');
 });
 
-test('older news and news kept in DACS Community are not exported', () => {
-  assert.equal(winsNews({ id: 'old', body: 'x' }, ctx), null);
-  assert.equal(winsNews({ id: 'off', body: 'x', wins: 'off' }, ctx), null);
+test('every news item is shared as public, including older ones', () => {
+  assert.equal(winsNews({ id: 'old', title: 'Old', body: 'x' }, ctx).articleInformation.visibility, 'public');
+  assert.equal(winsNews({ id: 'off', title: 'Off', body: 'x', wins: 'off' }, ctx).articleInformation.visibility, 'public');
 });
 
 test('a missing summary falls back to the first 300 characters', () => {
@@ -52,27 +53,35 @@ test('multi-day events give an end date; internal meetings are never exported', 
   const base = { id: 'e2', title: 'Workshop', wins: 'public', startAt: '2026-12-01T08:00:00.000Z', endAt: '2026-12-03T16:00:00.000Z', timeZone: 'UTC', description: 'x' };
   assert.equal(winsEvent(base, ctx).eventInformation.eventEndDate, '2026-12-03');
   assert.equal(winsEvent({ ...base, meetingType: 'core', body: 'wg1' }, ctx), null);
-  assert.equal(winsEvent({ ...base, wins: undefined }, ctx), null);
+  assert.equal(winsEvent({ ...base, wins: undefined }, ctx).eventInformation.visibility, 'public');
 });
 
-test('event validation requires an overview only when the event is shared, and checks the shared fields', () => {
+test('public events require an overview; internal meetings do not; shared fields are checked', () => {
   const e = { title: 'T', description: '', startAt: '2026-12-01T08:00:00.000Z', endAt: '2026-12-01T09:00:00.000Z', timeZone: 'UTC', location: '', registrationUrl: '', joinUrl: '', ocs: [1], mgs: ['1.1'] };
-  assert.equal(eventError({ ...e, wins: 'off' }), '');
-  assert.match(eventError({ ...e, wins: 'public' }), /overview/);
-  assert.equal(eventError({ ...e, wins: 'public', description: 'Overview' }), '');
-  assert.match(eventError({ ...e, eventType: 'Party' }), /event type/);
-  assert.match(eventError({ ...e, format: 'remote' }), /format/);
-  assert.match(eventError({ ...e, imageUrls: ['ftp://x'] }), /External image URLs/);
-  assert.match(eventError({ ...e, memberStates: ['Atlantis'] }), /Member States/);
-  assert.equal(eventError({ ...e, wins: 'public', description: 'x', meetingType: 'core', body: 'wg1' }), '');
+  assert.match(eventError(e), /overview/);
+  assert.equal(eventError({ ...e, meetingType: 'core', body: 'wg1' }), '');
+  assert.equal(eventError({ ...e, description: 'Overview' }), '');
+  const d = { ...e, description: 'Overview' };
+  assert.match(eventError({ ...d, eventType: 'Party' }), /event type/);
+  assert.match(eventError({ ...d, format: 'remote' }), /format/);
+  assert.match(eventError({ ...d, imageUrls: ['ftp://x'] }), /External image URLs/);
+  assert.match(eventError({ ...d, memberStates: ['Atlantis'] }), /Member States/);
 });
 
-test('Member States follow the IHP-WINS list and show their usual spelling', () => {
-  assert.equal(memberStates.length, 210);
+test('Member States use the UNESCO names and convert to the IHP-WINS values', () => {
+  assert.equal(unescoCountries.length, 189);
+  assert.equal(memberStates, unescoCountries);
+  assert.equal(new Set(unescoCountries).size, 189);
   assert.equal(stateName('C Te D Ivoire'), "Côte d'Ivoire");
-  assert.equal(stateName('Viet Nam'), 'Viet Nam');
+  assert.equal(stateName('Netherlands'), 'Netherlands (Kingdom of the)');
+  assert.equal(unescoCountry('Vietnam'), 'Viet Nam');
+  assert.equal(winsState("Côte d'Ivoire"), 'C Te D Ivoire');
+  assert.equal(winsState('Türkiye'), 'T Rkiye');
+  assert.equal(winsState('Netherlands (Kingdom of the)'), 'Netherlands');
+  assert.deepEqual(unescoCountries.filter(c => !winsMemberStates.includes(winsState(c))), []);
   assert.equal(memberStatesError([ALL_MEMBER_STATES, 'France']), 'Choose either all member states or individual Member States.');
   assert.equal(memberStatesError(['France', 'Viet Nam']), '');
+  assert.match(memberStatesError(['C Te D Ivoire']), /from the list/);
 });
 
 test('helpers: slugs, links and "Label: Value" details', () => {

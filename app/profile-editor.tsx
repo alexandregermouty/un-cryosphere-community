@@ -9,6 +9,7 @@ import { useMemberAuth } from "./auth";
 import { Check, Upload } from "lucide-react";
 import { RoleDeclaration } from "./role-requests";
 import { getOwnRequest, type RoleRequest } from "@/lib/role-requests";
+import { unescoCountries, unescoCountry } from "@/lib/countries";
 
 export function OptionQuestion({
   kind,
@@ -128,6 +129,8 @@ export function ProfileEditor({
       ...blankProfile,
       ...initial,
       name: initial?.name || user?.displayName || "",
+      // Countries use the names approved by UNESCO; earlier spellings are converted when they match.
+      country: unescoCountry(initial?.country || "") || initial?.country || "",
     }),
     [step, setStep] = useState(0),
     [photoBusy, setPhotoBusy] = useState(false),
@@ -311,7 +314,7 @@ export function ProfileEditor({
             {field("name", "Full name", false, 120, true)}
             {field("headline", "Professional headline")}
             {field("organisation", "Organisation / affiliation")}
-            {field("country", "Country", false, 100)}
+            <CountryField value={draft.country || ""} onChange={(v) => update("country", v)} />
             <div className="field">
               <label htmlFor="edit-region">Regional experience</label>
               <select
@@ -557,5 +560,28 @@ export function ProfileEditor({
         )}
       </div>
     </form>
+  );
+}
+
+const OTHER = "__other";
+/** Country of the member: a name from the UNESCO list, or another country or territory typed in. */
+function CountryField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const listed = !!unescoCountry(value);
+  const [other, setOther] = useState(!!value && !listed);
+  return (
+    <div className="field">
+      <label htmlFor="edit-country">Country</label>
+      <select id="edit-country" value={other ? OTHER : listed ? unescoCountry(value) : ""}
+        onChange={(e) => {
+          if (e.target.value === OTHER) { setOther(true); onChange(listed ? "" : value); }
+          else { setOther(false); onChange(e.target.value); }
+        }}>
+        <option value="">Select a country...</option>
+        {unescoCountries.map((c) => <option key={c} value={c}>{c}</option>)}
+        <option value={OTHER}>Other country or territory</option>
+      </select>
+      {other && <input aria-label="Other country or territory" maxLength={100} placeholder="Country or territory" value={value} onChange={(e) => onChange(e.target.value)} />}
+      <small>Country names as approved by UNESCO.</small>
+    </div>
   );
 }

@@ -7,12 +7,10 @@ import {db} from '@/lib/firebase';
 import {meetingBodies} from '@/lib/meetings';
 import {friendlyError} from '@/lib/store';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from '@/components/ui/dialog';
-import {Plus,MessageSquare,ArrowUpRight,Pencil,Trash2,Paperclip,Newspaper,Send,ChevronRight,Download,Globe2} from 'lucide-react';
-import {FormSection,WinsVisibilityField,MemberStatePicker,HeaderImageField,HeaderImage,LinkList,ImageStrip,MemberStateList,Counter} from './wins-fields';
-import {winsNews,parseLinks,linksError,memberStatesError,excerpt,SUMMARY_MAX,NEWS_BODY_MAX,type WinsVisibility} from '@/lib/wins';
+import {Plus,MessageSquare,ArrowUpRight,Pencil,Trash2,Paperclip,Newspaper,Send,ChevronRight} from 'lucide-react';
+import {FormSection,MemberStatePicker,HeaderImageField,HeaderImage,LinkList,ImageStrip,MemberStateList,Counter} from './wins-fields';
+import {parseLinks,linksError,memberStatesError,excerpt,SUMMARY_MAX,NEWS_BODY_MAX} from '@/lib/wins';
 import {deleteHeaderImage} from '@/lib/content-images';
-import {appUrl} from '@/lib/base';
-import {bodyLabel} from '@/lib/meetings';
 import {toast} from 'sonner';
 import {GoalPicker,GoalLabels} from './goal-picker';
 import {linkedGroups,isDecadeWide} from '@/lib/decade-goals';
@@ -35,11 +33,9 @@ function newsAccent(p:any){
 const headline=(p:any)=>{if(p.title?.trim())return p.title.trim();const first=(p.body||'').trim().split(/\n|(?<=[.!?])\s/)[0]||'';return first.length>90?first.slice(0,89)+'…':first||'News';};
 const hasOwnTitle=(p:any)=>!!p.title?.trim();
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
-const winsLabel=(v?:string)=>v==='public'?'Shared on IHP-WINS':v==='private'?'Shared on IHP-WINS (staff only)':'';
-type NewsDraft={id?:string;title:string;publishedOn:string;source:string;wins:WinsVisibility;summary:string;body:string;url:string;relatedLinks:string;additionalContent:string;headerImageUrl:string;headerImageId:string;imageUrls:string;memberStates:string[];bodyId:string;mgs:string[];attachments?:any[];saved?:string[]};
-const blankNews=():NewsDraft=>({title:'',publishedOn:today(),source:'',wins:'public',summary:'',body:'',url:'',relatedLinks:'',additionalContent:'',headerImageUrl:'',headerImageId:'',imageUrls:'',memberStates:[],bodyId:'',mgs:[]});
-/** Download the shareable news in the IHP-WINS format. */
-export function downloadJson(name:string,data:unknown){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+type NewsDraft={id?:string;title:string;publishedOn:string;source:string;summary:string;body:string;url:string;relatedLinks:string;additionalContent:string;headerImageUrl:string;headerImageId:string;imageUrls:string;memberStates:string[];bodyId:string;mgs:string[];attachments?:any[];saved?:string[]};
+const blankNews=():NewsDraft=>({title:'',publishedOn:today(),source:'',summary:'',body:'',url:'',relatedLinks:'',additionalContent:'',headerImageUrl:'',headerImageId:'',imageUrls:'',memberStates:[],bodyId:'',mgs:[]});
+
 
 export function NewsBoard({uid,name,admin,access}:{uid:string;name:string;admin:boolean;access:MeetingAccess}){
  const [posts,setPosts]=useState<any[]>([]),[draft,setDraft]=useState<NewsDraft|null>(null),[selected,setSelected]=useState<any>(null),[filter,setFilter]=useState(''),[error,setError]=useState(''),[saving,setSaving]=useState(false);
@@ -57,20 +53,19 @@ export function NewsBoard({uid,name,admin,access}:{uid:string;name:string;admin:
  }
  async function save(e:React.FormEvent){e.preventDefault();if(!draft)return;const bad=problem(draft);if(bad){setError(bad);return;}if(!db)return;setSaving(true);setError('');try{
   const fields={title:draft.title.trim(),body:draft.body.trim(),url:draft.url.trim(),bodyId:draft.bodyId,mgs:draft.mgs||[],wg:/^wg[1-5]$/.test(draft.bodyId)?Number(draft.bodyId[2]):0,attachments:cleanAttachments(draft.attachments),
-   publishedOn:draft.publishedOn,source:draft.source.trim(),wins:draft.wins,summary:draft.summary.trim(),relatedLinks:parseLinks(draft.relatedLinks),additionalContent:draft.additionalContent.trim(),
+   publishedOn:draft.publishedOn,source:draft.source.trim(),wins:'public',summary:draft.summary.trim(),relatedLinks:parseLinks(draft.relatedLinks),additionalContent:draft.additionalContent.trim(),
    headerImageUrl:draft.headerImageUrl.trim(),headerImageId:draft.headerImageId,imageUrls:parseLinks(draft.imageUrls),memberStates:draft.memberStates,updatedAt:serverTimestamp()};
   if(draft.id)await updateDoc(doc(db,'posts',draft.id),fields);else await setDoc(doc(collection(db,'posts')),{...fields,author:uid,author_name:name,createdAt:serverTimestamp()});
   setDraft(null);toast.success(draft.id?'News updated.':'News published.');}catch(e){setError(friendlyError(e));}finally{setSaving(false);}}
- function edit(p:any){setDraft({id:p.id,title:p.title||'',publishedOn:p.publishedOn||(iso(p.createdAt)||new Date().toISOString()).slice(0,10),source:p.source||'',wins:p.wins==='public'||p.wins==='private'?p.wins:'off',summary:p.summary||'',body:p.body||'',url:p.url||'',relatedLinks:(p.relatedLinks||[]).join('\n'),additionalContent:p.additionalContent||'',headerImageUrl:p.headerImageUrl||'',headerImageId:p.headerImageId||'',imageUrls:(p.imageUrls||[]).join('\n'),memberStates:p.memberStates||[],bodyId:group(p),mgs:p.mgs||[],attachments:p.attachments||[],saved:(p.attachments||[]).map((a:any)=>a.id)});setSelected(null);}
+ function edit(p:any){setDraft({id:p.id,title:p.title||'',publishedOn:p.publishedOn||(iso(p.createdAt)||new Date().toISOString()).slice(0,10),source:p.source||'',summary:p.summary||'',body:p.body||'',url:p.url||'',relatedLinks:(p.relatedLinks||[]).join('\n'),additionalContent:p.additionalContent||'',headerImageUrl:p.headerImageUrl||'',headerImageId:p.headerImageId||'',imageUrls:(p.imageUrls||[]).join('\n'),memberStates:p.memberStates||[],bodyId:group(p),mgs:p.mgs||[],attachments:p.attachments||[],saved:(p.attachments||[]).map((a:any)=>a.id)});setSelected(null);}
  async function remove(p:any){if(!confirm('Delete this news item and its comments?'))return;try{await deleteDoc(doc(db!,'posts',p.id));if(p.headerImageId)await deleteHeaderImage(p.headerImageId);setSelected(null);toast.success('News deleted.');}catch(e){setError(friendlyError(e));}}
- function exportWins(){const items=posts.slice(0,50).map(p=>winsNews(p,{appUrl:appUrl(),bodyName:bodyLabel})).filter(Boolean);downloadJson(`dacs-news-ihp-wins-${today()}.json`,{format:'ihp-wins-news',exported:new Date().toISOString(),items});toast.success(`${items.length} news ${items.length===1?'item':'items'} exported.`);}
  const filters=[['','All news'],...meetingBodies.map(b=>[b.id,shortBody(b.id)])];
  return <section className="news-board">
   <div className="news-toolbar">
    <div className="news-filters" role="group" aria-label="News from">
     {filters.map(([id,label])=><button key={id} type="button" className={'news-filter'+(filter===id?' on':'')} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}
    </div>
-   <div className="toolbar">{admin&&<button className="btn" title="Download the news shared on IHP-WINS in the IHP-WINS format" onClick={exportWins}><Download size={16}/> IHP-WINS export</button>}<button className="btn primary" onClick={()=>setDraft(blankNews())}><Plus size={16}/> Share news</button></div>
+   <div className="toolbar"><button className="btn primary" onClick={()=>setDraft(blankNews())}><Plus size={16}/> Share news</button></div>
   </div>
   {error&&!draft&&<p className="error-banner" role="alert">{error}</p>}
   {posts.length>50&&<p className="notice">Showing the latest 50 news items.</p>}
@@ -87,7 +82,6 @@ export function NewsBoard({uid,name,admin,access}:{uid:string;name:string;admin:
       {files>0&&<span><Paperclip size={13}/>{files} {files===1?'file':'files'}</span>}
       {p.url&&<a href={p.url} target="_blank" rel="noopener noreferrer"><ArrowUpRight size={13}/>Source</a>}
       {(p.mgs||[]).length>0&&<span>{isDecadeWide(p.mgs)?'All 15 main goals':`${p.mgs.length} main ${p.mgs.length===1?'goal':'goals'}`}</span>}
-      {winsLabel(p.wins)&&<span title={winsLabel(p.wins)}><Globe2 size={13}/>IHP-WINS</span>}
      </div>
      <div className="news-card-footer">
       <CreatedBy uid={p.author} verb="Shared by" compact fallback={p.author_name}/>
@@ -97,7 +91,7 @@ export function NewsBoard({uid,name,admin,access}:{uid:string;name:string;admin:
   </div>
   {!shown.length&&!error&&<div className="glass empty-state"><Newspaper size={28}/><h3>{filter?'No news from this group yet':'Share news from the Decade'}</h3><p>Publish an update, a useful resource or a result. Members can discuss it in the comments.</p></div>}
 
-  <Dialog open={!!draft} onOpenChange={v=>!v&&!saving&&setDraft(null)}><DialogContent className="detail-content news-form wins-form"><DialogTitle>{draft?.id?'Edit news':'Share news'}</DialogTitle><DialogDescription>Visible to all members of DACS Community. The sections follow the IHP-WINS form so that the article can also be shared with the water community. Fields marked * are required.</DialogDescription>
+  <Dialog open={!!draft} onOpenChange={v=>!v&&!saving&&setDraft(null)}><DialogContent className="detail-content news-form wins-form"><DialogTitle>{draft?.id?'Edit news':'Share news'}</DialogTitle><DialogDescription>Visible to all members of DACS Community. Fields marked * are required.</DialogDescription>
    {draft&&<form onSubmit={save} noValidate><fieldset disabled={saving}>
     <FormSection n={1} title="Article information" required open>
      <label>Article Title *<input maxLength={160} required value={draft.title} placeholder="Clear, engaging title for your news article" onChange={e=>set({title:e.target.value})}/></label>
@@ -105,7 +99,6 @@ export function NewsBoard({uid,name,admin,access}:{uid:string;name:string;admin:
       <label>Publication Date *<input type="date" required value={draft.publishedOn} onChange={e=>set({publishedOn:e.target.value})}/><small className="micro">When was this news published?</small></label>
       <label>Author/Source<input maxLength={200} value={draft.source} placeholder={name} onChange={e=>set({source:e.target.value})}/><small className="micro">Who wrote or published this news?</small></label>
      </div>
-     <WinsVisibilityField value={draft.wins} onChange={wins=>set({wins})} note="Shared articles are sent to IHP-WINS for validation, under the organization Intergovernmental Hydrological Programme."/>
     </FormSection>
     <FormSection n={2} title="Article content" required open>
      <label>Article Summary *<textarea required maxLength={SUMMARY_MAX} rows={3} value={draft.summary} placeholder="This summary will appear in news listings and social media shares" onChange={e=>set({summary:e.target.value})}/><Counter value={draft.summary} max={SUMMARY_MAX}/></label>
@@ -156,7 +149,6 @@ export function NewsBoard({uid,name,admin,access}:{uid:string;name:string;admin:
      <AttachmentList items={current.attachments}/>
      <MemberStateList value={current.memberStates}/>
      {(current.mgs||[]).length>0&&<div className="news-goals"><span className="micro">Contributes to</span><GoalLabels value={current.mgs}/></div>}
-     {winsLabel(current.wins)&&<p className="micro wins-flag"><Globe2 size={13}/> {winsLabel(current.wins)}</p>}
     </div>
     <NewsComments postId={current.id} uid={uid} name={name} admin={admin}/>
    </>;})()}

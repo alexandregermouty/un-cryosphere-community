@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {localInput,timeCandidates,eventError,monthGrid,shiftMonth,gridRange,occursOn,timeZoneOptions,validTimeZone} from '../lib/calendar.ts';
-const event={id:'event',owner:'alice',title:'Meeting',description:'',startAt:'2026-10-08T00:30:00.000Z',endAt:'2026-10-08T01:30:00.000Z',timeZone:'Europe/Paris',location:'',registrationUrl:'https://example.org/register',joinUrl:'https://example.org/meeting',ocs:[1,5],mgs:['1.1','5.3']};
+const event={id:'event',owner:'alice',title:'Meeting',description:'Overview of the meeting.',startAt:'2026-10-08T00:30:00.000Z',endAt:'2026-10-08T01:30:00.000Z',timeZone:'Europe/Paris',location:'',registrationUrl:'https://example.org/register',joinUrl:'https://example.org/meeting',ocs:[1,5],mgs:['1.1','5.3']};
 test('one instant appears on each visitor’s local date, including fractional offsets',()=>{
  assert.equal(localInput(event.startAt,'America/Los_Angeles'),'2026-10-07T17:30');
  assert.equal(localInput(event.startAt,'Asia/Kathmandu'),'2026-10-08T06:15');
@@ -26,7 +26,7 @@ test('calendar grid spans six Monday-based weeks and crosses years correctly',()
 });
 test('event validation rejects unsafe links, unrelated goals and reversed dates',()=>{
  assert.equal(eventError(event),'');
- for (const change of [{joinUrl:'javascript:alert(1)'},{ocs:[1],mgs:['5.3']},{mgs:[]},{ocs:[]},{mgs:['1.1','1.1']},{startAt:event.endAt,endAt:event.startAt},{timeZone:'Invented/Zone'},{endAt:'2027-10-09T00:00:00Z'}]) assert.ok(eventError({...event,...change}));
+ for (const change of [{joinUrl:'javascript:alert(1)'},{ocs:[1],mgs:['5.3']},{mgs:[]},{ocs:[]},{mgs:['1.1','1.1']},{startAt:event.endAt,endAt:event.startAt},{timeZone:'Invented/Zone'},{endAt:'2027-10-09T00:00:00Z'},{description:'  '}]) assert.ok(eventError({...event,...change}));
 });
 
 test('timezone choices cover cities and fractional offsets without accepting arbitrary input',()=>{

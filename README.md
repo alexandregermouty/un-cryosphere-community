@@ -1,6 +1,6 @@
 # DACS Community
 
-Member platform of the UN Decade of Action for Cryospheric Sciences 2025–2034 (version 3.30): member profiles, Working Group spaces, governance, calendar and meeting polls, messages, news, task boards, templates and the logo authorisation desk.
+Member platform of the UN Decade of Action for Cryospheric Sciences 2025–2034 (version 3.31): member profiles, Working Group spaces, governance, calendar and meeting polls, messages, news, task boards, templates and the logo authorisation desk.
 
 The platform is a static single-page application built with Vite, React and TypeScript. Sign-in and data storage use Firebase Authentication and Cloud Firestore directly from the browser, so the web pages can be served by GitHub Pages while the data remains in the Firebase project `cryohub-eb898`.
 
@@ -104,4 +104,4 @@ Firestore rules tests need Java 17 or later: `npm run test:rules`. Use of the Fi
 - `docs/DEPLOYMENT.md`: deployment to Firebase Hosting.
 - `docs/EMAIL_SETUP.md`: account access and email operations.
 - `docs/WINS_SYNC.md`: correspondence between the DACS news and event forms and the IHP-WINS forms, and steps for automatic synchronisation.
-- `docs/changelog/`: release notes for versions 3.2 to 3.30.
+- `docs/changelog/`: release notes for versions 3.2 to 3.31.

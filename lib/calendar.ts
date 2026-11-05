@@ -7,7 +7,7 @@ export type CalendarEvent = {
   body?: string; meetingType?: string; pollId?: string;
   attachments?: { id: string; name: string; type: 'pdf' | 'doc' | 'docx' | 'ppt' | 'pptx'; size: number; body: string }[];
   // Fields shared with the IHP-WINS "Share New Event" form (all optional for older events).
-  wins?: 'public' | 'private' | 'off'; eventType?: string; format?: string;
+  wins?: 'public' | 'off'; eventType?: string; format?: string;
   organizerName?: string; coOrganizers?: string; details?: string; speakers?: string;
   registrationInfo?: string; additionalInfo?: string; summary?: string;
   headerImageUrl?: string; headerImageId?: string; imageUrls?: string[]; memberStates?: string[];
@@ -48,8 +48,8 @@ export function eventError(e: Omit<CalendarEvent, 'id' | 'owner'>): string {
   const start = Date.parse(e.startAt), end = Date.parse(e.endAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 31 * 86400000) return 'Choose an end after the start, within 31 days.';
   if (e.description.length > EVENT_OVERVIEW_MAX || e.location.length > 300) return 'Shorten the event overview or location.';
-  const shared = (e.wins === 'public' || e.wins === 'private') && (!e.meetingType || e.meetingType === 'public');
-  if (shared && !e.description.trim()) return 'Write the event overview: it is required to share the event on IHP-WINS.';
+  const isPublic = !e.meetingType || e.meetingType === 'public';
+  if (isPublic && !e.description.trim()) return 'Write the event overview.';
   if (e.eventType && !(winsEventTypes as readonly string[]).includes(e.eventType)) return 'Choose an event type from the list.';
   if (e.format && !eventFormats.some(([id]) => id === e.format)) return 'Choose an event format from the list.';
   if ((e.organizerName || '').length > 200 || (e.coOrganizers || '').length > 500) return 'Shorten the organizer names.';

@@ -221,6 +221,7 @@ export const countryCentroids: Record<string, [number, number]> = {
   "Trinidad and Tobago": [-61.3, 10.4],
   "Tunisia": [9.6, 34.1],
   "Turkey": [35.4, 39.1],
+  "Tuvalu": [179.2, -8.5], // Added by hand (Funafuti): Tuvalu is not in the Natural Earth 1:50m data.
   "Turkmenistan": [59.4, 39.1],
   "Turks and Caicos Is.": [-71.7, 21.8],
   "U.S. Virgin Is.": [-64.8, 17.7],

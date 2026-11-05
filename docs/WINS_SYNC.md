@@ -6,11 +6,10 @@ The conversion is defined in `lib/wins.ts` (functions `winsNews` and `winsEvent`
 
 ## Which entries are shared
 
-1. Each news item and each public event has a "Visibility on IHP-WINS" choice with three options: "Public – visible to everyone", "Private – only visible to staff from the host organization" (the two IHP-WINS options) and "Do not share on IHP-WINS (DACS Community only)".
-2. New entries default to "Public". Entries created before version 3.30 are treated as not shared until they are edited.
-3. Internal meetings (leadership, Core Group and Broad Group meetings of a Decade body) are never shared. The form does not offer the choice, and the database rules refuse it.
-4. Shared entries are sent with the action "submit for validation", so the IHP-WINS team validates them before publication.
-5. The organization is always "Intergovernmental Hydrological Programme". The associated initiative is "Decade of Action for Cryospheric Sciences"; its exact name in IHP-WINS is to be confirmed (constant `WINS_INITIATIVE` in `lib/wins.ts`).
+1. Every news item and every public event is shared as public. The forms do not ask for a visibility.
+2. Internal meetings (leadership, Core Group and Broad Group meetings of a Decade body) are never shared.
+3. Shared entries are sent with the action "submit for validation", so the IHP-WINS team validates them before publication.
+4. The organization is always "Intergovernmental Hydrological Programme". The associated initiative is "Decade of Action for Cryospheric Sciences"; its exact name in IHP-WINS is to be confirmed (constant `WINS_INITIATIVE` in `lib/wins.ts`).
 
 ## Share News
 
@@ -20,7 +19,7 @@ The conversion is defined in `lib/wins.ts` (functions `winsNews` and `winsEvent`
 | | Article URL | generated from `title` | Lowercase, accents removed, words joined by hyphens. |
 | | Publication Date * | `publishedOn` (required, YYYY-MM-DD) | Defaults to the day of writing. |
 | | Author/Source | `source` | Defaults to the member who shares the news. |
-| | Visibility | `wins` | `public`, `private` or `off` (not shared). |
+| | Visibility | fixed | Always public. |
 | | Organization | fixed | Intergovernmental Hydrological Programme. |
 | 2. Article Content | Article Summary * | `summary` (required, 300 characters) | |
 | | Full Article Content * | `body` (required) | Limit raised from 3,000 to 10,000 characters. |
@@ -44,13 +43,13 @@ The conversion is defined in `lib/wins.ts` (functions `winsNews` and `winsEvent`
 | | Event Type | `eventType` | Conference, Workshop, Seminar, Training, Webinar, Meeting, Prize Award Ceremony, Book Launch, Celebration. |
 | | Event Start Date * | `startAt` | Date in the event time zone. |
 | | Event End Date | `endAt` | Exported only when the event ends on another day. DACS keeps exact start and end times. |
-| | Visibility | `wins` | Public events only. |
+| | Visibility | fixed | Always public; internal meetings are not shared. |
 | | Location | `location` | |
 | | Primary Organization | fixed | Intergovernmental Hydrological Programme. |
 | | Displayed Organizer Name | `organizerName` | Defaults to "Decade of Action for Cryospheric Sciences 2025–2034". |
 | | Co-organizers | `coOrganizers` | |
 | | Event Format | `format` | `in-person`, `online` or `hybrid`. |
-| 2. Event Description | Event Overview * | `description` | Required when the event is shared. Limit raised to 5,000 characters. |
+| 2. Event Description | Event Overview * | `description` | Required for public events. Limit raised to 5,000 characters. |
 | 3. Event Details | Event Details | `details` | "Label: Value" lines. A "Time:" line is added from the start and end times when none is written. |
 | 4. Speakers & Organizers | Speakers & Organizers | `speakers` | |
 | 5. Registration Information | Registration Information | `registrationInfo` | |
@@ -63,17 +62,15 @@ The conversion is defined in `lib/wins.ts` (functions `winsNews` and `winsEvent`
 | 10. Member States & Initiatives | Member States, Associated Initiatives | `memberStates`, fixed initiative | |
 | DACS only | Time zone, meeting category, organising body, virtual meeting link, main goals, poll | `timeZone`, `meetingType`, `body`, `joinUrl`, `ocs`, `mgs`, `pollId` | Not sent to IHP-WINS. The virtual meeting link is not exported. |
 
-## Member States
+## Member States and countries
 
-The list in `lib/wins.ts` reproduces the 210 values of the IHP-WINS form. IHP-WINS shows some names without accents or punctuation (for example "C Te D Ivoire" and "T Rkiye"). DACS Community stores these exact values, so that both sites use the same identifiers, and displays the usual spelling (Côte d'Ivoire, Türkiye).
+DACS Community uses the country names approved by UNESCO, as written in the Official Directory of Permanent Delegations to UNESCO (https://pax.unesco.org/PermanentDelegations/PermanentDelegationsAll.html): the 188 Permanent Delegations and the Permanent Observer (Holy See). The list is in `lib/countries.ts`. It is used for the Member States of news and events and for the country in member profiles, including at registration.
 
-## Export available now
-
-The UNESCO Secretariat has an "IHP-WINS export" button on the News page and on the Calendar. It downloads, as a JSON file, the shared news (latest 50) or the shared events of the displayed month, already in the IHP-WINS structure above.
+IHP-WINS writes some names without accents or punctuation (for example "C Te D Ivoire" and "T Rkiye"). On export, each UNESCO name is converted to its IHP-WINS value (function `winsState` in `lib/wins.ts`); "Netherlands (Kingdom of the)" becomes "Netherlands". All 189 names have an IHP-WINS value.
 
 ## Automatic synchronisation: what is still needed
 
-The Firebase Spark plan has no server functions, so DACS Community cannot push entries by itself. The intended set-up is a scheduled GitHub Actions workflow that reads new or changed shared entries from Firestore with a service account, converts them with `winsNews` and `winsEvent`, sends them to IHP-WINS, and records the IHP-WINS identifier on the DACS entry. The following must be obtained from the IHP-WINS team before it can be built:
+The Firebase Spark plan has no server functions, so DACS Community cannot push entries by itself. The intended set-up is a scheduled GitHub Actions workflow that reads new or changed shared entries from Firestore with a service account, converts them with `winsNews` and `winsEvent` (`lib/wins.ts`), sends them to IHP-WINS, and records the IHP-WINS identifier on the DACS entry. The following must be obtained from the IHP-WINS team before it can be built:
 
 1. The API endpoints for creating and updating news and events, and the authentication method (API key or service account).
 2. The identifiers expected for the organization, the initiative, the Member States and the event types, if they differ from the labels.

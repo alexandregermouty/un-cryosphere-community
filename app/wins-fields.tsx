@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, ImagePlus, Link2, Loader2, X, Globe2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ALL_MEMBER_STATES, memberStates, stateName, winsVisibilities, detailLines, type WinsVisibility } from '@/lib/wins';
+import { ALL_MEMBER_STATES, memberStates, stateName, detailLines } from '@/lib/wins';
 import { getHeaderImage, uploadHeaderImage } from '@/lib/content-images';
 import { friendlyError } from '@/lib/store';
 
@@ -17,18 +17,6 @@ export function FormSection({ n, title, hint, required, open, children }: { n: n
       <summary><span className="form-section-n">{n}</span><span className="form-section-title">{title}{required && <em> *</em>}</span>{hint && <small>{hint}</small>}</summary>
       <div className="form-section-body">{children}</div>
     </details>
-  );
-}
-
-export function WinsVisibilityField({ value, onChange, note }: { value: WinsVisibility; onChange: (v: WinsVisibility) => void; note: string }) {
-  return (
-    <fieldset className="wins-visibility">
-      <legend>Visibility on IHP-WINS</legend>
-      {winsVisibilities.map(([id, label]) => (
-        <label key={id} className="radio-line"><input type="radio" name="wins-visibility" value={id} checked={value === id} onChange={() => onChange(id)} /> {label}</label>
-      ))}
-      <small className="micro">{note}</small>
-    </fieldset>
   );
 }
 
