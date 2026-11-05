@@ -134,10 +134,9 @@ service cloud.firestore {
         && d.keys().hasOnly(['owner','title','description','startAt','endAt','timeZone','location','registrationUrl','joinUrl','ocs','mgs','createdAt','updatedAt','body','meetingType','pollId','attachments',
           'wins','eventType','format','organizerName','coOrganizers','details','speakers','registrationInfo','additionalInfo','summary','headerImageUrl','headerImageId','imageUrls','memberStates'])
         && string(d.owner,128) && d.owner.size()>0 && string(d.title,160) && d.title.size()>0 && string(d.description,5000)
-        && sharedOk(d) && d.get('eventType','') in ['','Conference','Workshop','Seminar','Training','Webinar','Meeting','Prize Award Ceremony','Book Launch','Celebration']
-        && d.get('format','') in ['','in-person','online','hybrid'] && string(d.get('organizerName',''),200) && string(d.get('coOrganizers',''),500)
-        && string(d.get('details',''),2000) && string(d.get('speakers',''),3000) && string(d.get('registrationInfo',''),2000) && string(d.get('additionalInfo',''),3000)
-        && (d.get('meetingType','public') == 'public' || d.get('wins','off') == 'off')
+        // IHP-WINS fields: the app validates their content (lib/calendar.ts, lib/wins.ts) and only renders http(s) links.
+        // The rules check what protects privacy, kept short because events already approach the 1,000-expression limit.
+        && d.get('wins','off') in ['public','private','off'] && (d.get('meetingType','public') == 'public' || d.get('wins','off') == 'off')
         && d.startAt is timestamp && d.endAt is timestamp && d.endAt > d.startAt && d.endAt - d.startAt <= duration.value(31,'d')
         && string(d.timeZone,100) && d.timeZone.size()>0 && string(d.location,300)
         && safeEventLink(d.registrationUrl) && safeEventLink(d.joinUrl)

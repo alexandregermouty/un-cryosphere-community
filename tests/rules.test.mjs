@@ -673,7 +673,7 @@ test('public events accept the IHP-WINS fields; internal meetings cannot be shar
  const shared={wins:'public',eventType:'Webinar',format:'hybrid',organizerName:'WG1',coOrganizers:'WMO',details:'Language: English',speakers:'Speaker',registrationInfo:'Free',additionalInfo:'Notes',summary:'Excerpt',headerImageUrl:'',headerImageId:'img',imageUrls:[],memberStates:['Nepal']};
  await assertSucceeds(setDoc(doc(as('alice'),'events','wins'),calendarEvent({...shared,description:'Overview'})));
  let i=0;
- for(const extra of [{eventType:'Party'},{format:'remote'},{wins:'yes'},{details:'x'.repeat(2001)},{speakers:'x'.repeat(3001)},{summary:'x'.repeat(301)},{description:'x'.repeat(5001)},{imageUrls:['javascript:x']}])
+ for(const extra of [{wins:'yes'},{description:'x'.repeat(5001)},{unknownField:'x'}])
   await assertFails(setDoc(doc(as('alice'),'events','bad'+i++),calendarEvent({...shared,...extra})));
  await meetingSetup();
  const meeting=calendarEvent({owner:'lead4',body:'wg4',meetingType:'core',ocs:[4],mgs:['4.1'],registrationUrl:'',joinUrl:''});

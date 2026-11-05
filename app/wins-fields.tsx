@@ -7,6 +7,9 @@ import { ALL_MEMBER_STATES, memberStates, stateName, winsVisibilities, detailLin
 import { getHeaderImage, uploadHeaderImage } from '@/lib/content-images';
 import { friendlyError } from '@/lib/store';
 
+/** Only web links are rendered, whatever is stored. */
+const web = (u?: string) => typeof u === 'string' && /^https?:\/\/[^\s]+$/i.test(u);
+
 /** A numbered form section, as in the IHP-WINS forms. Optional sections start folded. */
 export function FormSection({ n, title, hint, required, open, children }: { n: number; title: string; hint?: string; required?: boolean; open?: boolean; children: React.ReactNode }) {
   return (
@@ -85,10 +88,10 @@ export function HeaderImageField({ url, id, onChange, width, height, label = 'He
 }
 
 export function HeaderImage({ url, id, alt, className = 'header-image' }: { url?: string; id?: string; alt: string; className?: string }) {
-  const [src, setSrc] = useState(url || '');
+  const [src, setSrc] = useState(web(url) ? url! : '');
   useEffect(() => {
     let live = true;
-    if (url) setSrc(url);
+    if (web(url)) setSrc(url!);
     else if (id) { setSrc(''); void getHeaderImage(id).then(v => live && setSrc(v)); }
     else setSrc('');
     return () => { live = false; };
@@ -98,7 +101,8 @@ export function HeaderImage({ url, id, alt, className = 'header-image' }: { url?
 }
 
 export function LinkList({ title, links }: { title: string; links?: string[] }) {
-  if (!links?.length) return null;
+  links = (links || []).filter(web);
+  if (!links.length) return null;
   return (
     <div className="link-list"><span className="micro">{title}</span>
       <ul>{links.map(l => <li key={l}><a href={l} target="_blank" rel="noopener noreferrer"><Link2 size={13} /> {l.replace(/^https?:\/\//, '').slice(0, 80)} <ArrowUpRight size={12} /></a></li>)}</ul>
@@ -107,7 +111,8 @@ export function LinkList({ title, links }: { title: string; links?: string[] }) 
 }
 
 export function ImageStrip({ urls }: { urls?: string[] }) {
-  if (!urls?.length) return null;
+  urls = (urls || []).filter(web);
+  if (!urls.length) return null;
   return <div className="image-strip">{urls.map(u => <a key={u} href={u} target="_blank" rel="noopener noreferrer"><img src={u} alt="" loading="lazy" referrerPolicy="no-referrer" /></a>)}</div>;
 }
 
