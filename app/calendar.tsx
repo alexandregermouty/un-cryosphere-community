@@ -1,7 +1,7 @@
 import {EventAttendance} from './event-attendance';
 import {CreatedBy} from './people-context';
 import {useEffect, useMemo, useState} from 'react';
-import {CalendarDays, ChevronLeft, ChevronRight, Plus, ArrowUpRight, Pencil, Trash2, Clock3, Lock, Globe2, MapPin, Users, AlignLeft, Target, Paperclip} from 'lucide-react';
+import {CalendarDays, ChevronLeft, ChevronRight, Plus, ArrowUpRight, Pencil, Trash2, Clock3, Lock, Globe2, MapPin, Users, AlignLeft, Target, Paperclip, ListChecks, Mic, Ticket, Info, Download} from 'lucide-react';
 import {groups} from '@/lib/data';
 import {eventAccent,accentStyle,eventTiming,durationLabel,groupColor} from '@/lib/event-style';
 import {bodyTitle} from '@/lib/profile-options';
@@ -20,11 +20,16 @@ import {MeetingAgenda} from './meeting-agenda';
 import {MeetingMinutes,AddToCalendar} from './meeting-minutes';
 import {toast} from 'sonner';
 import {TimeZonePicker} from './time-zone-picker';
+import {FormSection,WinsVisibilityField,MemberStatePicker,HeaderImageField,HeaderImage,ImageStrip,MemberStateList,DetailList,Counter} from './wins-fields';
+import {downloadJson} from './news';
+import {appUrl} from '@/lib/base';
+import {winsEventTypes,eventFormats,parseLinks,winsEvent,SUMMARY_MAX,EVENT_OVERVIEW_MAX,DEFAULT_ORGANIZER,type WinsVisibility} from '@/lib/wins';
 import {useTimeZone} from '@/hooks/use-time-zone';
 
 const formatDay = (day:string) => new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(day+'T12:00:00Z'));
 const formatInstant = (value:string, zone:string) => new Intl.DateTimeFormat('en-GB',{timeZone:zone,day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}).format(new Date(value));
-type Draft = {attachments:Attachment[];saved:string[];title:string; description:string; start:string; end:string; startChoice:string; endChoice:string; location:string; registrationUrl:string; joinUrl:string; ocs:number[]; mgs:string[]; body:string; meetingType:string; pollId:string;selectedSlot?:number};
+type Draft = {attachments:Attachment[];saved:string[];title:string; description:string; start:string; end:string; startChoice:string; endChoice:string; location:string; registrationUrl:string; joinUrl:string; ocs:number[]; mgs:string[]; body:string; meetingType:string; pollId:string;selectedSlot?:number;
+  wins:WinsVisibility; eventType:string; format:string; organizerName:string; coOrganizers:string; details:string; speakers:string; registrationInfo:string; additionalInfo:string; summary:string; headerImageUrl:string; headerImageId:string; imageUrls:string; memberStates:string[]};
 
 export function DecadeCalendar({uid, admin, canAdd, focusEvent, onSaved,access,meetingSeed,onOpenPolls,people=[]}:{uid:string;admin:boolean;canAdd:boolean;focusEvent?:CalendarEvent;onSaved?:()=>void;access:MeetingAccess;meetingSeed?:MeetingSeed;onOpenPolls:()=>void;people?:any[]}) {
   const leaders=leadershipBodies(access);
@@ -75,7 +80,8 @@ export function DecadeCalendar({uid, admin, canAdd, focusEvent, onSaved,access,m
     if(event?.body && db && canOrganise(access,event.body)){try{const s=await getDoc(doc(db,'events',event.id,'meetingDetails','main'));if(s.exists())privateLinks=s.data();}catch(e){toast.error(friendlyError(e));return;}}
     const z=event?.timeZone || zone;setFormZone(z);setEditing(event?.id || '');setFormError('');
     const start=event?localInput(event.startAt,z):seed?localInput(seed.startAt,z):selectedDay+'T09:00', end=event?localInput(event.endAt,z):seed?localInput(seed.endAt,z):selectedDay+'T10:00';
-    setDraft({attachments:event?.attachments||[],saved:(event?.attachments||[]).map(a=>a.id),title:event?.title||seed?.title||'',body:event?.body||seed?.body||'',meetingType:event?.meetingType||seed?.meetingType||'public',pollId:event?.pollId||seed?.pollId||'',selectedSlot:seed?.selectedSlot,description:event?.description||'',start,end,startChoice:event?.startAt||'',endChoice:event?.endAt||'',location:event?.location||'',registrationUrl:privateLinks.registrationUrl||event?.registrationUrl||'',joinUrl:privateLinks.joinUrl||event?.joinUrl||'',ocs:event?.ocs||linkedGroups(seed?.mgs||[]),mgs:event?.mgs||seed?.mgs||[]});
+    setDraft({attachments:event?.attachments||[],saved:(event?.attachments||[]).map(a=>a.id),title:event?.title||seed?.title||'',body:event?.body||seed?.body||'',meetingType:event?.meetingType||seed?.meetingType||'public',pollId:event?.pollId||seed?.pollId||'',selectedSlot:seed?.selectedSlot,description:event?.description||'',start,end,startChoice:event?.startAt||'',endChoice:event?.endAt||'',location:event?.location||'',registrationUrl:privateLinks.registrationUrl||event?.registrationUrl||'',joinUrl:privateLinks.joinUrl||event?.joinUrl||'',ocs:event?.ocs||linkedGroups(seed?.mgs||[]),mgs:event?.mgs||seed?.mgs||[],
+      wins:event?(event.wins==='public'||event.wins==='private'?event.wins:'off'):(seed?.meetingType?'off':'public'),eventType:event?.eventType||(seed?.meetingType?'Meeting':''),format:event?.format||'',organizerName:event?.organizerName||'',coOrganizers:event?.coOrganizers||'',details:event?.details||'',speakers:event?.speakers||'',registrationInfo:event?.registrationInfo||'',additionalInfo:event?.additionalInfo||'',summary:event?.summary||'',headerImageUrl:event?.headerImageUrl||'',headerImageId:event?.headerImageId||'',imageUrls:(event?.imageUrls||[]).join('\n'),memberStates:event?.memberStates||[]});
     setSelectedId('');setDayOpen(false);
   }
   useEffect(()=>{if(meetingSeed){void openForm(undefined,meetingSeed);const day=localInput(meetingSeed.startAt,zone).slice(0,10);setMonth(day.slice(0,7));setSelectedDay(day);}},[meetingSeed]);
@@ -99,7 +105,8 @@ export function DecadeCalendar({uid, admin, canAdd, focusEvent, onSaved,access,m
     if (!startAt||!endAt) {setFormError('Choose valid times. For a repeated clock hour, select an occurrence.');return;}
     setSaving(true);setFormError('');
     try {
-      await saveEvent({title:draft.title,description:draft.description,startAt,endAt,timeZone:formZone,location:draft.location,registrationUrl:draft.registrationUrl,joinUrl:draft.joinUrl,ocs:draft.ocs,mgs:draft.mgs,body:draft.body,meetingType:draft.meetingType,pollId:draft.pollId,attachments:cleanAttachments(draft.attachments)},editing||undefined,draft.selectedSlot);
+      await saveEvent({title:draft.title,description:draft.description,startAt,endAt,timeZone:formZone,location:draft.location,registrationUrl:draft.registrationUrl,joinUrl:draft.joinUrl,ocs:draft.ocs,mgs:draft.mgs,body:draft.body,meetingType:draft.meetingType,pollId:draft.pollId,attachments:cleanAttachments(draft.attachments),
+        wins:draft.wins,eventType:draft.eventType,format:draft.format,organizerName:draft.organizerName,coOrganizers:draft.coOrganizers,details:draft.details,speakers:draft.speakers,registrationInfo:draft.registrationInfo,additionalInfo:draft.additionalInfo,summary:draft.summary,headerImageUrl:draft.headerImageUrl,headerImageId:draft.headerImageId,imageUrls:parseLinks(draft.imageUrls),memberStates:draft.memberStates},editing||undefined,draft.selectedSlot);
       const day=localInput(startAt,zone).slice(0,10);setMonth(day.slice(0,7));setSelectedDay(day);setFilter('');setGoalFilter('');setDraft(null);setEditing(null);toast.success('Event saved.');onSaved?.();
     } catch(e) {setFormError(friendlyError(e));} finally {setSaving(false);}
   }
@@ -116,7 +123,7 @@ export function DecadeCalendar({uid, admin, canAdd, focusEvent, onSaved,access,m
     <div className="calendar-toolbar">
       <div className="calendar-zone"><TimeZonePicker label="Calendar time zone" value={zone} onChange={setZone} automatic={automatic} onAutomatic={useDevice}/><span className={"micro calendar-status "+(status==='Live updates'?'live':'')} role="status">{status}</span></div>
   <div className="calendar-filters"><label>Challenge<select aria-label="Challenge" value={filter} onChange={e=>{setFilter(e.target.value);setGoalFilter('');}}><option value="">All challenges</option>{challenges.map(n=><option key={n} value={n}>{challengeLabel(n)}</option>)}</select></label><label>Main goal<select aria-label="Main goal" value={goalFilter} onChange={e=>setGoalFilter(e.target.value)}><option value="">All main goals</option>{mainGoals.filter(m=>!filter||m.startsWith(filter+'.')).map(m=><option key={m} value={m}>{goalLabel(m)}</option>)}</select></label></div>
-      <div className="toolbar calendar-actions">{leaders.length>0&&<button className="btn" onClick={onOpenPolls}><GlobeIcon/> Find a meeting time</button>}<button className="btn primary" disabled={!canAdd} onClick={()=>openForm()}><Plus size={16}/> Add event</button></div>
+      <div className="toolbar calendar-actions">{admin&&<button className="btn" title="Download this month's events shared on IHP-WINS in the IHP-WINS format" onClick={()=>{const items=monthEvents.map(e=>winsEvent(e,{appUrl:appUrl()})).filter(Boolean);downloadJson(`dacs-events-ihp-wins-${month}.json`,{format:'ihp-wins-events',exported:new Date().toISOString(),month,items});toast.success(`${items.length} ${items.length===1?'event':'events'} exported.`);}}><Download size={16}/> IHP-WINS export</button>}{leaders.length>0&&<button className="btn" onClick={onOpenPolls}><GlobeIcon/> Find a meeting time</button>}<button className="btn primary" disabled={!canAdd} onClick={()=>openForm()}><Plus size={16}/> Add event</button></div>
     </div>
     {error && <div className="error-banner" role="alert">{error} <button className="btn small" onClick={()=>setRetry(n=>n+1)}>Retry</button></div>}
     {capped && <p className="notice">This busy period exceeds the calendar’s display limit. Some events may be missing.</p>}
@@ -142,18 +149,61 @@ export function DecadeCalendar({uid, admin, canAdd, focusEvent, onSaved,access,m
     <Dialog open={dayOpen} onOpenChange={setDayOpen}><DialogContent className="detail-content"><DialogTitle>{formatDay(selectedDay)}</DialogTitle><DialogDescription>All displayed events on this date · {zone.replaceAll('_',' ')}</DialogDescription>{!dayEvents.length&&<div className="agenda-empty"><CalendarDays size={22}/><p>No events on this day.</p></div>}<div className="ev-list">{dayEvents.map(event=><EventCard key={event.id} event={event} zone={zone} now={now} onOpen={()=>open(event.id)}/>)}</div>{canAdd&&<button className="btn primary" onClick={()=>openForm()}><Plus size={16}/> Add an event on this date</button>}</DialogContent></Dialog>
     <Dialog open={!!selected} onOpenChange={v=>!v&&!saving&&setSelectedId('')}><DialogContent className="detail-content event-sheet ev" style={selected?accentStyle(selected):undefined}>{selected ? <EventSheet event={selected} zone={zone} now={now} access={access} people={people}
       footer={(admin||(selected.body?canOrganise(access,selected.body):selected.owner===uid)) && <div className="event-footer">{confirmDelete?<><span>Delete this event?</span><button className="btn danger" disabled={saving} onClick={deleteSelected}>{saving?'Deleting…':'Delete event'}</button><button className="btn" disabled={saving} onClick={()=>setConfirmDelete(false)}>Cancel</button></>:<><span className="micro">You can manage this event.</span><button className="btn" onClick={()=>openForm(selected)}><Pencil size={14}/> Edit</button><button className="btn" onClick={()=>setConfirmDelete(true)}><Trash2 size={14}/> Delete</button></>}</div>}/>:<><DialogTitle>Event</DialogTitle><DialogDescription/></>}</DialogContent></Dialog>
-    <Dialog open={!!draft} onOpenChange={v=>!v&&!saving&&(setDraft(null),setEditing(null))}><DialogContent className="detail-content calendar-form"><DialogTitle>{editing?'Edit event':'Add event'}</DialogTitle><DialogDescription>Enter times in {formZone.replaceAll('_',' ')}. Every member will see their local time.</DialogDescription>{draft && <form onSubmit={submit}>
+    <Dialog open={!!draft} onOpenChange={v=>!v&&!saving&&(setDraft(null),setEditing(null))}><DialogContent className="detail-content calendar-form wins-form"><DialogTitle>{editing?'Edit event':'Add event'}</DialogTitle><DialogDescription>Enter times in {formZone.replaceAll('_',' ')}. Every member will see their local time. The sections follow the IHP-WINS form so that public events can also be shared with the IHP Water Family. Fields marked * are required.</DialogDescription>{draft && <form onSubmit={submit}>
       <fieldset disabled={saving}>
       <TimeZonePicker label="Event time zone" value={formZone} onChange={changeFormZone}/>
       <div className="calendar-form-grid"><label>Meeting category<select aria-label="Meeting category" disabled={(!!editing&&!admin)||!!draft.pollId} value={draft.meetingType} onChange={e=>patch({meetingType:e.target.value,body:e.target.value==='public'?'':leaders[0]?.id||''})}><option value="public">Public event</option>{leaders.length>0&&meetingTypes.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label>{draft.meetingType!=='public'&&<label>Organising body<select aria-label="Organising body" required disabled={(!!editing&&!admin)||!!draft.pollId} value={draft.body} onChange={e=>patch({body:e.target.value})}>{leaders.map(b=><option key={b.id} value={b.id}>{b.label}</option>)}</select></label>}</div>
       {draft.meetingType!=='public'&&<p className="micro">The calendar shows the meeting date and title to members. Joining links and the agenda are restricted to this meeting’s audience.</p>}
-      <label>Event title<input required maxLength={160} value={draft.title} onChange={e=>patch({title:e.target.value})}/></label>
-      <div className="calendar-form-grid">{(['start','end'] as const).map(field=>{const options=field==='start'?startOptions:endOptions,choice=field==='start'?'startChoice':'endChoice';return <div key={field}><label>{field==='start'?'Start':'End'}<input required disabled={!!draft.pollId&&!editing} type="datetime-local" value={draft[field]} onChange={e=>patch({[field]:e.target.value,[choice]:''})}/></label>{draft[field]&&!options.length && <p className="calendar-validation">This time does not exist in {formZone}.</p>}{options.length>1 && <label>Repeated hour<select required value={draft[choice]} onChange={e=>patch({[choice]:e.target.value})}><option value="">Choose an occurrence</option>{options.map(t=><option key={t} value={t}>{formatInstant(t,formZone)}</option>)}</select></label>}</div>;})}</div>
-      <label>Description<textarea maxLength={3000} value={draft.description} onChange={e=>patch({description:e.target.value})}/></label>
-      <label>Location / venue<input maxLength={300} value={draft.location} onChange={e=>patch({location:e.target.value})}/></label>
-      <div className="calendar-form-grid"><label>Registration link<input type="url" maxLength={1000} placeholder="https://" value={draft.registrationUrl} onChange={e=>patch({registrationUrl:e.target.value})}/></label><label>Virtual meeting link<input type="url" maxLength={1000} placeholder="https://" value={draft.joinUrl} onChange={e=>patch({joinUrl:e.target.value})}/></label></div>
-      <GoalPicker label="Contributes to main goals" value={draft.mgs} onChange={mgs=>patch({mgs,ocs:linkedGroups(mgs)})}/>
-      {shareBody(access,draft.meetingType!=='public'?draft.body:'')!==null&&<AttachmentPicker value={draft.attachments} saved={draft.saved} onChange={attachments=>setDraft(d=>d?{...d,attachments}:d)} body={shareBody(access,draft.meetingType!=='public'?draft.body:'')||''} audience={draft.meetingType==='public'?'all':draft.meetingType as any}/>}
+      {(()=>{const pub=draft.meetingType==='public',docs=shareBody(access,pub?'':draft.body);return <>
+      <FormSection n={1} title="Event information" required open>
+        <label>Event Title *<input required maxLength={160} value={draft.title} placeholder="Clear, descriptive title of the event" onChange={e=>patch({title:e.target.value})}/></label>
+        <label>Event Type<select value={draft.eventType} onChange={e=>patch({eventType:e.target.value})}><option value="">Select event type...</option>{winsEventTypes.map(t=><option key={t} value={t}>{t}</option>)}</select><small className="micro">Type of event or activity</small></label>
+        <div className="calendar-form-grid">{(['start','end'] as const).map(field=>{const options=field==='start'?startOptions:endOptions,choice=field==='start'?'startChoice':'endChoice';return <div key={field}><label>{field==='start'?'Event Start Date *':'Event End Date *'}<input required disabled={!!draft.pollId&&!editing} type="datetime-local" value={draft[field]} onChange={e=>patch({[field]:e.target.value,[choice]:''})}/></label>{draft[field]&&!options.length && <p className="calendar-validation">This time does not exist in {formZone}.</p>}{options.length>1 && <label>Repeated hour<select required value={draft[choice]} onChange={e=>patch({[choice]:e.target.value})}><option value="">Choose an occurrence</option>{options.map(t=><option key={t} value={t}>{formatInstant(t,formZone)}</option>)}</select></label>}</div>;})}</div>
+        {pub?<WinsVisibilityField value={draft.wins} onChange={wins=>patch({wins})} note="Shared events are sent to IHP-WINS for validation, under the organization Intergovernmental Hydrological Programme."/>:<p className="micro">Internal meetings of the Decade bodies stay in DACS Community and are not shared on IHP-WINS.</p>}
+        <label>Location<input maxLength={300} value={draft.location} placeholder="Where will the event take place?" onChange={e=>patch({location:e.target.value})}/></label>
+        <div className="calendar-form-grid">
+          <label>Displayed Organizer Name<input maxLength={200} value={draft.organizerName} placeholder={draft.body?bodyTitle(draft.body,bodyLabel(draft.body)):DEFAULT_ORGANIZER} onChange={e=>patch({organizerName:e.target.value})}/><small className="micro">How the primary organizer should appear on the public event page</small></label>
+          <label>Co-organizers (optional)<input maxLength={500} value={draft.coOrganizers} onChange={e=>patch({coOrganizers:e.target.value})}/><small className="micro">Other organizations involved</small></label>
+        </div>
+        <div className="calendar-form-grid">
+          <label>Event Format<select value={draft.format} onChange={e=>patch({format:e.target.value})}><option value="">Select format...</option>{eventFormats.map(([id,l])=><option key={id} value={id}>{l}</option>)}</select></label>
+          <label>Virtual meeting link<input type="url" maxLength={1000} placeholder="https://" value={draft.joinUrl} onChange={e=>patch({joinUrl:e.target.value})}/><small className="micro">DACS Community only{pub?'':' · visible to the meeting audience'}</small></label>
+        </div>
+      </FormSection>
+      <FormSection n={2} title="Event description" required={pub&&draft.wins!=='off'} open>
+        <label>Event Overview{pub&&draft.wins!=='off'?' *':''}<textarea maxLength={EVENT_OVERVIEW_MAX} rows={6} value={draft.description} placeholder="What the event is about and why people should attend" onChange={e=>patch({description:e.target.value})}/><Counter value={draft.description} max={EVENT_OVERVIEW_MAX}/></label>
+      </FormSection>
+      <FormSection n={3} title="Event details" hint="Optional">
+        <label>Event Details<textarea maxLength={2000} rows={4} value={draft.details} placeholder={'One detail per line in format "Label: Value"\nLanguage: English'} onChange={e=>patch({details:e.target.value})}/><small className="micro">The time is added automatically for IHP-WINS from the start and end above.</small></label>
+      </FormSection>
+      {pub&&<FormSection n={4} title="Speakers & organizers" hint="Optional">
+        <label>Speakers & Organizers<textarea maxLength={3000} rows={4} value={draft.speakers} placeholder="Names, titles, affiliations and brief descriptions" onChange={e=>patch({speakers:e.target.value})}/></label>
+      </FormSection>}
+      <FormSection n={pub?5:4} title="Registration information" hint="Optional">
+        <label>Registration Information<textarea maxLength={2000} rows={3} value={draft.registrationInfo} placeholder="Fees, deadlines, requirements and registration process" onChange={e=>patch({registrationInfo:e.target.value})}/></label>
+        <label>Registration URL<input type="url" maxLength={1000} placeholder="https://" value={draft.registrationUrl} onChange={e=>patch({registrationUrl:e.target.value})}/><small className="micro">Direct link to registration page or form</small></label>
+      </FormSection>
+      {pub&&<FormSection n={6} title="Image gallery" hint="Optional">
+        <label>External Image URLs<textarea rows={3} value={draft.imageUrls} placeholder={'One image link per line\nhttps://'} onChange={e=>patch({imageUrls:e.target.value})}/></label>
+      </FormSection>}
+      <FormSection n={pub?7:5} title="Agenda & additional information" hint="Optional">
+        {docs!==null?<AttachmentPicker value={draft.attachments} saved={draft.saved} onChange={attachments=>setDraft(d=>d?{...d,attachments}:d)} body={docs||''} audience={pub?'all':draft.meetingType as any}/>:<p className="micro">Agenda or flyer files can be added by the leadership of a Decade body and by the UNESCO Secretariat.</p>}
+        <label>Additional Information<textarea maxLength={3000} rows={3} value={draft.additionalInfo} onChange={e=>patch({additionalInfo:e.target.value})}/></label>
+      </FormSection>
+      {pub&&<FormSection n={8} title="Header image" hint="Optional">
+        <HeaderImageField url={draft.headerImageUrl} id={draft.headerImageId} width={1600} height={600} onChange={v=>patch({headerImageUrl:v.url,headerImageId:v.id})}/>
+      </FormSection>}
+      {pub&&<FormSection n={9} title="Summary/excerpt" hint="Optional">
+        <label>Excerpt<textarea maxLength={SUMMARY_MAX} rows={3} value={draft.summary} onChange={e=>patch({summary:e.target.value})}/><small className="micro">Brief summary for the events list page. If not provided, the first 300 characters of the overview will be used.</small><Counter value={draft.summary} max={SUMMARY_MAX}/></label>
+      </FormSection>}
+      {pub&&<FormSection n={10} title="Member States & Initiatives" hint="Optional">
+        <MemberStatePicker what="event" value={draft.memberStates} onChange={memberStates=>patch({memberStates})}/>
+        <p className="micro">Associated initiative: Decade of Action for Cryospheric Sciences.</p>
+      </FormSection>}
+      <FormSection n={pub?11:6} title="Decade of Action" hint="DACS Community only" required open>
+        <GoalPicker label="Contributes to main goals *" value={draft.mgs} onChange={mgs=>patch({mgs,ocs:linkedGroups(mgs)})}/>
+      </FormSection>
+      </>;})()}
       {formError && <p className="error-banner" role="alert">{formError}</p>}<div className="toolbar"><button type="submit" className="btn primary">{saving?'Saving…':'Save event'}</button><button type="button" className="btn" onClick={()=>{setDraft(null);setEditing(null);}}>Cancel</button></div></fieldset>
     </form>}</DialogContent></Dialog>
   </section>;
@@ -192,17 +242,19 @@ function EventSheet({event,zone,now,access,people,footer}:{event:CalendarEvent;z
   const a=eventAccent(event),t=eventTiming(event.startAt,event.endAt,zone,now),day=localInput(event.startAt,zone).slice(0,10),d=new Date(day+'T12:00:00Z');
   const restricted=!!event.body&&!!event.meetingType&&event.meetingType!=='public';
   const fmt=(o:Intl.DateTimeFormatOptions)=>new Intl.DateTimeFormat('en-GB',{timeZone:'UTC',...o}).format(d);
-  const organiser=event.body?bodyTitle(event.body,bodyLabel(event.body)):'';
+  const organiser=event.organizerName||(event.body?bodyTitle(event.body,bodyLabel(event.body)):'');
+  const formatLabel=eventFormats.find(([id])=>id===event.format)?.[1];
   return <>
     <header className="event-hero">
       <div className="event-date-tile" aria-hidden="true"><small className="m">{fmt({month:'short'})}</small><b>{Number(day.slice(-2))}</b><small className="w">{fmt({weekday:'short'})} · {fmt({year:'numeric'})}</small></div>
       <div className="event-hero-text">
-        <div className="event-kicker"><span className="ev-tag">{a.tag}</span><span className="ev-type">{restricted?<Lock size={12}/>:<Globe2 size={12}/>}{typeLabel(event.meetingType||'public')}</span><span className={'ev-timing '+t.state}>{t.state==='live'&&<i/>}{t.label}</span></div>
+        <div className="event-kicker"><span className="ev-tag">{a.tag}</span><span className="ev-type">{restricted?<Lock size={12}/>:<Globe2 size={12}/>}{typeLabel(event.meetingType||'public')}</span>{event.eventType&&<span className="ev-type">{event.eventType}</span>}{formatLabel&&<span className="ev-type">{formatLabel}</span>}<span className={'ev-timing '+t.state}>{t.state==='live'&&<i/>}{t.label}</span></div>
         <DialogTitle>{event.title}</DialogTitle>
-        <DialogDescription>{organiser||'Decade event'} · Times in {zone.replaceAll('_',' ')}</DialogDescription>
+        <DialogDescription>{organiser||'Decade event'}{event.coOrganizers?` with ${event.coOrganizers}`:''} · Times in {zone.replaceAll('_',' ')}</DialogDescription>
         <CreatedBy uid={event.owner} verb="Added by"/>
       </div>
     </header>
+    <HeaderImage url={event.headerImageUrl} id={event.headerImageId} alt="" className="event-header-image"/>
     <div className="event-facts">
       <div className="fact"><span className="fact-icon"><Clock3 size={17}/></span><div><span className="fact-label">When</span><strong>{fmt({weekday:'long',day:'numeric',month:'long'})}</strong><span>{timeRange(event,zone)}{durationLabel(event.startAt,event.endAt)?` · ${durationLabel(event.startAt,event.endAt)}`:''}</span>{event.timeZone!==zone&&<span className="micro">Organiser time: {formatInstant(event.startAt,event.timeZone)}</span>}</div></div>
       <div className="fact"><span className="fact-icon"><MapPin size={17}/></span><div><span className="fact-label">Where</span><strong>{event.location||'To be confirmed'}</strong>{event.joinUrl&&<span>Online link available</span>}</div></div>
@@ -211,6 +263,12 @@ function EventSheet({event,zone,now,access,people,footer}:{event:CalendarEvent;z
     {(event.registrationUrl||event.joinUrl)&&<div className="toolbar event-links">{event.registrationUrl && <a className="btn primary" href={event.registrationUrl} target="_blank" rel="noopener noreferrer">Register <ArrowUpRight size={15}/></a>}{event.joinUrl && <a className="btn" href={event.joinUrl} target="_blank" rel="noopener noreferrer">Join online <ArrowUpRight size={15}/></a>}</div>}
     <EventAttendance event={event} access={access} people={people} canSee={!restricted||canAttend(access,event.body||'',event.meetingType||'public')}/>
     {event.description && <section className="event-section"><h3><AlignLeft size={16}/> About</h3><p className="calendar-description">{event.description}</p></section>}
+    {event.details && <section className="event-section"><h3><ListChecks size={16}/> Details</h3><DetailList text={event.details}/></section>}
+    {event.speakers && <section className="event-section"><h3><Mic size={16}/> Speakers and organizers</h3><p className="calendar-description">{event.speakers}</p></section>}
+    {event.registrationInfo && <section className="event-section"><h3><Ticket size={16}/> Registration</h3><p className="calendar-description">{event.registrationInfo}</p></section>}
+    {event.additionalInfo && <section className="event-section"><h3><Info size={16}/> Additional information</h3><p className="calendar-description">{event.additionalInfo}</p></section>}
+    {!!event.imageUrls?.length && <section className="event-section"><ImageStrip urls={event.imageUrls}/></section>}
+    {(!!event.memberStates?.length||event.wins==='public'||event.wins==='private') && <section className="event-section"><MemberStateList value={event.memberStates}/>{(event.wins==='public'||event.wins==='private')&&<p className="micro wins-flag"><Globe2 size={13}/> Shared on IHP-WINS{event.wins==='private'?' (staff only)':''}</p>}</section>}
     {!!event.attachments?.length&&(!restricted||canAttend(access,event.body||'',event.meetingType||'public'))&&<section className="event-section"><h3><Paperclip size={16}/> Documents</h3><AttachmentList items={event.attachments}/></section>}
     {(event.ocs.length>0||event.mgs.length>0)&&<section className="event-section"><h3><Target size={16}/> Contributes to</h3><div className="oc-chips">{event.ocs.map(n=><span className="oc-chip" key={n} style={{'--wg-color':groupColor(n).color} as React.CSSProperties}>{challengeLabel(n)}</span>)}</div><GoalLabels value={event.mgs}/></section>}
     <AddToCalendar event={event}/>

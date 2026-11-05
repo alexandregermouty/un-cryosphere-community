@@ -20,7 +20,12 @@ export function subscribeEvents(start: Date, end: Date, next: (events: CalendarE
 }
 export async function saveEvent(event: Omit<CalendarEvent, 'id' | 'owner'>, id?: string, selectedSlot?:number) {
   if (!db || !auth?.currentUser) throw new Error('Sign in to add an event.');
-  const clean = {...event, title:event.title.trim(), description:event.description.trim(), location:event.location.trim(), registrationUrl:event.registrationUrl.trim(), joinUrl:event.joinUrl.trim()};
+  const t=(v?:string)=>(v||'').trim(), internal=!!event.meetingType&&event.meetingType!=='public';
+  const clean = {...event, title:event.title.trim(), description:event.description.trim(), location:event.location.trim(), registrationUrl:event.registrationUrl.trim(), joinUrl:event.joinUrl.trim(),
+    // Fields shared with IHP-WINS. Internal meetings (leadership, Core Group, Broad Group) are never shared.
+    wins:internal?'off' as const:(event.wins||'off'), eventType:t(event.eventType), format:t(event.format), organizerName:t(event.organizerName), coOrganizers:t(event.coOrganizers),
+    details:t(event.details), speakers:t(event.speakers), registrationInfo:t(event.registrationInfo), additionalInfo:t(event.additionalInfo), summary:t(event.summary),
+    headerImageUrl:t(event.headerImageUrl), headerImageId:t(event.headerImageId), imageUrls:(event.imageUrls||[]).map(u=>u.trim()).filter(Boolean), memberStates:event.memberStates||[]};
   if(clean.meetingType&&clean.meetingType!=='public'&&/^wg[1-5]$/.test(clean.body||'')&&!clean.ocs.includes(Number(clean.body![2])))throw Error('Select a main goal of the organising Working Group.');
   const error = eventError(clean); if (error) throw new Error(error);
   const fields = {...clean, startAt:Timestamp.fromDate(new Date(clean.startAt)), endAt:Timestamp.fromDate(new Date(clean.endAt)), updatedAt:serverTimestamp()};

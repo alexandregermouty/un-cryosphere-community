@@ -1,10 +1,16 @@
 import {overarchingChallenges,decadeGoals} from './decade-goals.ts';
+import {winsEventTypes,eventFormats,linksError,memberStatesError,EVENT_OVERVIEW_MAX,SUMMARY_MAX} from './wins.ts';
 export type CalendarEvent = {
   id: string; owner: string; title: string; description: string;
   startAt: string; endAt: string; timeZone: string; location: string;
   registrationUrl: string; joinUrl: string; ocs: number[]; mgs: string[];
   body?: string; meetingType?: string; pollId?: string;
   attachments?: { id: string; name: string; type: 'pdf' | 'doc' | 'docx' | 'ppt' | 'pptx'; size: number; body: string }[];
+  // Fields shared with the IHP-WINS "Share New Event" form (all optional for older events).
+  wins?: 'public' | 'private' | 'off'; eventType?: string; format?: string;
+  organizerName?: string; coOrganizers?: string; details?: string; speakers?: string;
+  registrationInfo?: string; additionalInfo?: string; summary?: string;
+  headerImageUrl?: string; headerImageId?: string; imageUrls?: string[]; memberStates?: string[];
 };
 export const challenges = overarchingChallenges.map(c=>c.id);
 export const mainGoals = decadeGoals.map(g=>g.id);
@@ -41,7 +47,17 @@ export function eventError(e: Omit<CalendarEvent, 'id' | 'owner'>): string {
   if (!e.title.trim() || e.title.length > 160) return 'Enter an event title (up to 160 characters).';
   const start = Date.parse(e.startAt), end = Date.parse(e.endAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > 31 * 86400000) return 'Choose an end after the start, within 31 days.';
-  if (e.description.length > 3000 || e.location.length > 300) return 'Shorten the description or location.';
+  if (e.description.length > EVENT_OVERVIEW_MAX || e.location.length > 300) return 'Shorten the event overview or location.';
+  const shared = (e.wins === 'public' || e.wins === 'private') && (!e.meetingType || e.meetingType === 'public');
+  if (shared && !e.description.trim()) return 'Write the event overview: it is required to share the event on IHP-WINS.';
+  if (e.eventType && !(winsEventTypes as readonly string[]).includes(e.eventType)) return 'Choose an event type from the list.';
+  if (e.format && !eventFormats.some(([id]) => id === e.format)) return 'Choose an event format from the list.';
+  if ((e.organizerName || '').length > 200 || (e.coOrganizers || '').length > 500) return 'Shorten the organizer names.';
+  if ((e.details || '').length > 2000 || (e.registrationInfo || '').length > 2000) return 'Shorten the event details or registration information.';
+  if ((e.speakers || '').length > 3000 || (e.additionalInfo || '').length > 3000) return 'Shorten the speakers or additional information.';
+  if ((e.summary || '').length > SUMMARY_MAX) return `Shorten the summary to ${SUMMARY_MAX} characters.`;
+  for (const [links, label] of [[e.imageUrls || [], 'External image URLs'], [e.headerImageUrl ? [e.headerImageUrl] : [], 'Header image URL']] as [string[], string][]) { const m = linksError(links, label); if (m) return m; }
+  const states = memberStatesError(e.memberStates || []); if (states) return states;
   if (!e.ocs.length || e.ocs.length > 5 || new Set(e.ocs).size !== e.ocs.length || !e.ocs.every(n => challenges.includes(n))) return 'Select at least one overarching challenge.';
   if (!e.mgs.length || e.mgs.length > 15 || new Set(e.mgs).size !== e.mgs.length || !e.mgs.every(m => mainGoals.includes(m) && e.ocs.includes(Number(m[0])))) return 'Select main goals within the chosen challenges.';
   for (const url of [e.registrationUrl, e.joinUrl]) {

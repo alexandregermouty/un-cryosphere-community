@@ -1,6 +1,6 @@
 {
   "name": "dacs-community-spark",
-  "version": "3.29.0",
+  "version": "3.30.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,7 +10,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --experimental-strip-types --test tests/member-roles.test.mjs tests/calendar.test.mjs tests/decade-goals.test.mjs tests/meetings.test.mjs tests/workspace-links.test.mjs tests/discussion.test.mjs tests/appointments.test.mjs tests/coordination.test.mjs tests/mailing.test.mjs tests/tasks.test.mjs",
+    "test": "node --experimental-strip-types --test tests/member-roles.test.mjs tests/calendar.test.mjs tests/decade-goals.test.mjs tests/meetings.test.mjs tests/workspace-links.test.mjs tests/discussion.test.mjs tests/appointments.test.mjs tests/coordination.test.mjs tests/mailing.test.mjs tests/tasks.test.mjs tests/wins.test.mjs",
     "test:rules": "npx -y firebase-tools@14.22.0 emulators:exec --project demo-dacs-community --only firestore 'node --test tests/rules.test.mjs'",
     "deploy": "node scripts/deploy.mjs",
     "configure": "node scripts/configure.mjs",
@@ -23,7 +23,8 @@
     "test:appointments": "node --experimental-strip-types --test tests/appointments.test.mjs",
     "test:coordination": "node --experimental-strip-types --test tests/coordination.test.mjs",
     "test:mailing": "node --experimental-strip-types --test tests/mailing.test.mjs",
-    "test:tasks": "node --experimental-strip-types --test tests/tasks.test.mjs"
+    "test:tasks": "node --experimental-strip-types --test tests/tasks.test.mjs",
+    "test:wins": "node --experimental-strip-types --test tests/wins.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/source-sans-3": "^5.3.1",
