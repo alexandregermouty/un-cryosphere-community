@@ -655,3 +655,40 @@ test('logo review: access is granted member by member by the Secretariat, never 
  await assertSucceeds(updateDoc(doc(as('lead1'),'roles','alice'),{badges:['wg1-member']}));
  await assertFails(updateDoc(doc(as('lead1'),'roles','alice'),{logoReview:['wg1','wg2']}));
 });
+
+// Fields shared with the IHP-WINS "Share News" and "Share New Event" forms.
+const winsNewsPost=(extra={})=>({author:'alice',author_name:'Test member',wg:0,bodyId:'',title:'Glacier update',body:'Full article content',url:'https://example.org/source',publishedOn:'2026-11-05',source:'WGMS',wins:'public',summary:'Short summary',relatedLinks:['https://example.org/a','https://example.org/b'],additionalContent:'Background',headerImageUrl:'https://example.org/h.jpg',headerImageId:'',imageUrls:['https://example.org/1.jpg'],memberStates:['France','Viet Nam'],mgs:['3.1'],createdAt:serverTimestamp(),updatedAt:serverTimestamp(),...extra});
+test('news accept the IHP-WINS fields and reject malformed values',async()=>{
+ await seedMember('alice');
+ await assertSucceeds(setDoc(doc(as('alice'),'posts','wins'),winsNewsPost()));
+ await assertSucceeds(setDoc(doc(as('alice'),'posts','all-states'),winsNewsPost({memberStates:['All member states'],wins:'private'})));
+ await assertSucceeds(setDoc(doc(as('alice'),'posts','long'),winsNewsPost({body:'x'.repeat(10000)})));
+ let i=0;
+ for(const extra of [{wins:'everyone'},{summary:'x'.repeat(301)},{body:'x'.repeat(10001)},{publishedOn:'05/11/2026'},{relatedLinks:['javascript:alert(1)']},{relatedLinks:Array.from({length:11},(_,n)=>'https://example.org/'+n)},{imageUrls:['ftp://example.org/x.jpg']},{headerImageUrl:'data:text/html,x'},{memberStates:['All member states','France']},{memberStates:['France','France']},{source:'x'.repeat(201)},{additionalContent:'x'.repeat(3001)},{unknown:'field'}])
+  await assertFails(setDoc(doc(as('alice'),'posts','bad'+i++),winsNewsPost(extra)));
+ await assertSucceeds(updateDoc(doc(as('alice'),'posts','wins'),{wins:'off',summary:'Revised',updatedAt:serverTimestamp()}));
+});
+test('public events accept the IHP-WINS fields; internal meetings cannot be shared',async()=>{
+ await seedMember('alice');
+ const shared={wins:'public',eventType:'Webinar',format:'hybrid',organizerName:'WG1',coOrganizers:'WMO',details:'Language: English',speakers:'Speaker',registrationInfo:'Free',additionalInfo:'Notes',summary:'Excerpt',headerImageUrl:'',headerImageId:'img',imageUrls:[],memberStates:['Nepal']};
+ await assertSucceeds(setDoc(doc(as('alice'),'events','wins'),calendarEvent({...shared,description:'Overview'})));
+ let i=0;
+ for(const extra of [{eventType:'Party'},{format:'remote'},{wins:'yes'},{details:'x'.repeat(2001)},{speakers:'x'.repeat(3001)},{summary:'x'.repeat(301)},{description:'x'.repeat(5001)},{imageUrls:['javascript:x']}])
+  await assertFails(setDoc(doc(as('alice'),'events','bad'+i++),calendarEvent({...shared,...extra})));
+ await meetingSetup();
+ const meeting=calendarEvent({owner:'lead4',body:'wg4',meetingType:'core',ocs:[4],mgs:['4.1'],registrationUrl:'',joinUrl:''});
+ await assertFails(setDoc(doc(as('lead4'),'events','shared-meeting'),{...meeting,wins:'public'}));
+ await assertSucceeds(setDoc(doc(as('lead4'),'events','internal-meeting'),{...meeting,wins:'off',eventType:'Meeting'}));
+});
+test('header images: members upload compressed JPEG only, owners and the Secretariat delete',async()=>{
+ await seedMember('alice');
+ const image={owner:'alice',data:'data:image/jpeg;base64,'+'A'.repeat(200),createdAt:serverTimestamp()};
+ await assertFails(setDoc(doc(as('guest'),'contentImages','g'),{...image,owner:'guest'}));
+ await assertSucceeds(setDoc(doc(as('alice'),'contentImages','img'),image));
+ await assertFails(setDoc(doc(as('alice'),'contentImages','png'),{...image,data:'data:image/png;base64,'+'A'.repeat(200)}));
+ await assertFails(setDoc(doc(as('alice'),'contentImages','forged'),{...image,owner:'bob'}));
+ await assertFails(setDoc(doc(as('alice'),'contentImages','huge'),{...image,data:'data:image/jpeg;base64,'+'A'.repeat(700000)}));
+ await assertSucceeds(getDoc(doc(as('bob'),'contentImages','img')));
+ await assertFails(deleteDoc(doc(as('bob'),'contentImages','img')));
+ await assertSucceeds(deleteDoc(doc(as('alice'),'contentImages','img')));
+});

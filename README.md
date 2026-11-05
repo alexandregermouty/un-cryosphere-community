@@ -1,6 +1,6 @@
 # DACS Community
 
-Member platform of the UN Decade of Action for Cryospheric Sciences 2025–2034 (version 3.29): member profiles, Working Group spaces, governance, calendar and meeting polls, messages, news, task boards, templates and the logo authorisation desk.
+Member platform of the UN Decade of Action for Cryospheric Sciences 2025–2034 (version 3.30): member profiles, Working Group spaces, governance, calendar and meeting polls, messages, news, task boards, templates and the logo authorisation desk.
 
 The platform is a static single-page application built with Vite, React and TypeScript. Sign-in and data storage use Firebase Authentication and Cloud Firestore directly from the browser, so the web pages can be served by GitHub Pages while the data remains in the Firebase project `cryohub-eb898`.
 
@@ -33,7 +33,7 @@ On a free GitHub plan, GitHub Pages requires a public repository. See "Before ma
 
 ### 2. Turn on GitHub Pages
 
-In the repository, open **Settings → Pages** and set **Source** to **GitHub Actions**. The workflow `.github/workflows/deploy-pages.yml` then runs on every push to `main`: it installs the dependencies, runs the 59 unit tests, builds the site and publishes it. Progress is shown in the **Actions** tab.
+In the repository, open **Settings → Pages** and set **Source** to **GitHub Actions**. The workflow `.github/workflows/deploy-pages.yml` then runs on every push to `main`: it installs the dependencies, runs the unit tests and the Firestore rules tests, builds the site and publishes it. Progress is shown in the **Actions** tab.
 
 The site is published at `https://<owner>.github.io/<repository>/`. The workflow sets the base path automatically, so no file needs to be edited when the repository is renamed.
 
@@ -103,4 +103,5 @@ Firestore rules tests need Java 17 or later: `npm run test:rules`. Use of the Fi
 - `docs/platform-reference.md`: features, roles and permissions, Spark plan limits (former README).
 - `docs/DEPLOYMENT.md`: deployment to Firebase Hosting.
 - `docs/EMAIL_SETUP.md`: account access and email operations.
-- `docs/changelog/`: release notes for versions 3.2 to 3.29.
+- `docs/WINS_SYNC.md`: correspondence between the DACS news and event forms and the IHP-WINS forms, and steps for automatic synchronisation.
+- `docs/changelog/`: release notes for versions 3.2 to 3.30.

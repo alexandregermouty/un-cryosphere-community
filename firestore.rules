@@ -112,12 +112,32 @@ service cloud.firestore {
         && d.wg is int && d.wg >= 1 && d.wg <= 5 && string(d.message,2000) && d.message.size()>0
         && d.status in ['Interested','Shortlisted','Selected','In progress','Completed','Not selected','Withdrawn'] && d.createdAt is timestamp && d.updatedAt == request.time;
     }
-    function validPost(d) { return d.keys().hasAll(['author','author_name','wg','body','createdAt']) && d.keys().hasOnly(['author','author_name','wg','body','createdAt','title','url','bodyId','updatedAt','mgs','attachments']) && validGoals(d.get('mgs',[])) && string(d.author,128) && string(d.author_name,120) && d.wg is int && d.wg >= 0 && d.wg <= 5 && string(d.body,3000) && d.body.size()>0 && d.createdAt is timestamp && string(d.get('title',''),160) && safeEventLink(d.get('url','')) && (d.get('bodyId','') == '' || validBody(d.bodyId)) && (!('updatedAt' in d) || d.updatedAt == request.time) && attachmentsOk(d); }
+    // Fields shared with the IHP-WINS news and event forms (lib/wins.ts).
+    function winsOk(v) { return v in ['public','private','off']; }
+    function linksOk(v) {
+      return v is list && v.size() <= 10 && (v.size() < 1 || safeEventLink(v[0])) && (v.size() < 2 || safeEventLink(v[1])) && (v.size() < 3 || safeEventLink(v[2]))
+        && (v.size() < 4 || safeEventLink(v[3])) && (v.size() < 5 || safeEventLink(v[4])) && (v.size() < 6 || safeEventLink(v[5])) && (v.size() < 7 || safeEventLink(v[6]))
+        && (v.size() < 8 || safeEventLink(v[7])) && (v.size() < 9 || safeEventLink(v[8])) && (v.size() < 10 || safeEventLink(v[9]));
+    }
+    // Member States are checked against the IHP-WINS list in the app (lib/wins.ts); the rules bound the list.
+    function statesOk(v) { return v is list && v.size() <= 211 && v.toSet().size() == v.size() && (!('All member states' in v) || v.size() == 1); }
+    function sharedOk(d) {
+      return winsOk(d.get('wins','off')) && string(d.get('summary',''),300) && safeEventLink(d.get('headerImageUrl','')) && string(d.get('headerImageId',''),128)
+        && linksOk(d.get('imageUrls',[])) && statesOk(d.get('memberStates',[]));
+    }
+    function validPost(d) { return d.keys().hasAll(['author','author_name','wg','body','createdAt']) && d.keys().hasOnly(['author','author_name','wg','body','createdAt','title','url','bodyId','updatedAt','mgs','attachments','publishedOn','source','wins','summary','relatedLinks','additionalContent','headerImageUrl','headerImageId','imageUrls','memberStates']) && validGoals(d.get('mgs',[])) && string(d.author,128) && string(d.author_name,120) && d.wg is int && d.wg >= 0 && d.wg <= 5 && string(d.body,10000) && d.body.size()>0 && d.createdAt is timestamp && string(d.get('title',''),160) && safeEventLink(d.get('url','')) && (d.get('bodyId','') == '' || validBody(d.bodyId)) && (!('updatedAt' in d) || d.updatedAt == request.time) && attachmentsOk(d)
+      && sharedOk(d) && string(d.get('publishedOn',''),10) && (d.get('publishedOn','') == '' || d.publishedOn.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')) && string(d.get('source',''),200)
+      && linksOk(d.get('relatedLinks',[])) && string(d.get('additionalContent',''),3000); }
     function safeEventLink(v) { return string(v,1000) && (v == '' || v.matches('^https?://[^\\s]+$')); }
     function validEvent(d) {
       return d.keys().hasAll(['owner','title','description','startAt','endAt','timeZone','location','registrationUrl','joinUrl','ocs','mgs','createdAt','updatedAt'])
-        && d.keys().hasOnly(['owner','title','description','startAt','endAt','timeZone','location','registrationUrl','joinUrl','ocs','mgs','createdAt','updatedAt','body','meetingType','pollId','attachments'])
-        && string(d.owner,128) && d.owner.size()>0 && string(d.title,160) && d.title.size()>0 && string(d.description,3000)
+        && d.keys().hasOnly(['owner','title','description','startAt','endAt','timeZone','location','registrationUrl','joinUrl','ocs','mgs','createdAt','updatedAt','body','meetingType','pollId','attachments',
+          'wins','eventType','format','organizerName','coOrganizers','details','speakers','registrationInfo','additionalInfo','summary','headerImageUrl','headerImageId','imageUrls','memberStates'])
+        && string(d.owner,128) && d.owner.size()>0 && string(d.title,160) && d.title.size()>0 && string(d.description,5000)
+        && sharedOk(d) && d.get('eventType','') in ['','Conference','Workshop','Seminar','Training','Webinar','Meeting','Prize Award Ceremony','Book Launch','Celebration']
+        && d.get('format','') in ['','in-person','online','hybrid'] && string(d.get('organizerName',''),200) && string(d.get('coOrganizers',''),500)
+        && string(d.get('details',''),2000) && string(d.get('speakers',''),3000) && string(d.get('registrationInfo',''),2000) && string(d.get('additionalInfo',''),3000)
+        && (d.get('meetingType','public') == 'public' || d.get('wins','off') == 'off')
         && d.startAt is timestamp && d.endAt is timestamp && d.endAt > d.startAt && d.endAt - d.startAt <= duration.value(31,'d')
         && string(d.timeZone,100) && d.timeZone.size()>0 && string(d.location,300)
         && safeEventLink(d.registrationUrl) && safeEventLink(d.joinUrl)
@@ -227,6 +247,15 @@ service cloud.firestore {
         && ((manages(resource.data.wg) && resource.data.status != 'Withdrawn' && request.resource.data.status != 'Withdrawn')
           || (resource.data.member_id == request.auth.uid && !(resource.data.status in ['Completed','Not selected','Withdrawn']) && request.resource.data.status == 'Withdrawn'))));
       allow delete: if admin();
+    }
+    match /contentImages/{id} {
+      // Header images of news and events, resized and compressed in the browser (lib/content-images.ts).
+      allow read: if signed();
+      allow create: if member() && request.resource.data.keys().hasAll(['owner','data','createdAt']) && request.resource.data.keys().hasOnly(['owner','data','createdAt'])
+        && request.resource.data.owner == request.auth.uid && request.resource.data.createdAt == request.time
+        && string(request.resource.data.data,700000) && request.resource.data.data.size() > 100
+        && request.resource.data.data.split(',').size() == 2 && request.resource.data.data.split(',')[0] == 'data:image/jpeg;base64';
+      allow delete: if admin() || own(resource.data.owner);
     }
     match /posts/{id} {
       allow read: if signed();
