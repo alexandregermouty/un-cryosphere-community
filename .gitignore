@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env.local
+.env.*.local
+.env
+.firebase/
+*-debug.log
+harness.log
+.DS_Store
+
+# Private data: never commit to a public repository
+data/
+shots/
+qa-*.mjs
