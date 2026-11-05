@@ -1,6 +1,8 @@
 # Temporary: runs the Firestore rules tests of version 3.29 (no deployment).
 name: Rules baseline
-on: workflow_dispatch
+on:
+  push:
+    branches: [rules-baseline]
 permissions:
   contents: read
 jobs:
