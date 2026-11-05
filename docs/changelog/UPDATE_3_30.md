@@ -19,3 +19,12 @@ The database rules change. Deploy the rules **before** the website, otherwise me
 2. Push the code to `main`. The "Deploy to GitHub Pages" workflow now also runs the Firestore rules tests and publishes only if they pass.
 
 Existing news and events remain valid and are not shared on IHP-WINS until they are edited.
+
+## Rules tests
+
+The Firestore rules tests now run before every deployment. Running them showed that four tests written before versions 3.24 and 3.26 no longer matched the behaviour those versions introduced on purpose. The rules were not changed for them; the tests were brought up to date:
+
+1. Logo review (three tests): since version 3.26, access is granted member by member by the UNESCO Secretariat, and appointments or badges alone give none. The tests now check exactly that, including that access ends when the Secretariat removes it.
+2. Flagship projects (one test): since version 3.24, the member who proposed an activity may change its flagship project. The test now checks that the proposer can and that other members cannot.
+
+Events already come close to the Firestore limit of 1,000 rule expressions evaluated per request. The rules therefore check only the privacy-relevant IHP-WINS fields on events (visibility, and that internal meetings are never shared); the app checks the content of the other fields and displays only web links (http and https).
